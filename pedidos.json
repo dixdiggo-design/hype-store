@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1789084710161,
+    "nome": "antony sousa",
+    "discord": "th.00.00.",
+    "email": "dixdiggo@gmail.com",
+    "itens": [
+      {
+        "nome": "Nitro Discord",
+        "preco": 10,
+        "quantidade": 1
+      }
+    ],
+    "data": "2026-09-10T23:58:30.161Z",
+    "status": "aguardando pagamento"
+  },
+  {
+    "id": 1789086888800,
+    "nome": "antony sousa",
+    "discord": "thg",
+    "email": "asdaw",
+    "itens": [
+      {
+        "nome": "Nitro Discord",
+        "preco": 10,
+        "quantidade": 1
+      }
+    ],
+    "data": "2026-09-11T00:34:48.800Z",
+    "status": "aguardando pagamento"
+  }
+]

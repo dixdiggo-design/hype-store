@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HYPE STORE</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+   <header>
+    <div class="logo">HYPE STORE</div>
+
+    <nav>
+        <a href="#">Início</a>
+        <a href="#produtos">Produtos</a>
+        <a href="#contato">Contato</a>
+    </nav>
+
+    <button class="botao-carrinho" onclick="abrirCarrinho()">
+        🛒 Carrinho
+        <span id="contador-carrinho">0</span>
+    </button>
+</header>
+
+    <main>
+
+        <section class="hero">
+            <h1>SUA LOJA DIGITAL</h1>
+
+            <p>
+                Produtos digitais com entrega rápida e segura.
+            </p>
+
+            <a href="#produtos" class="botao">
+                VER PRODUTOS
+            </a>
+        </section>
+
+        <section id="produtos" class="produtos">
+
+            <h2>Produtos</h2>
+
+            <div class="cards">
+
+                <div class="card">
+                    <div class="icone">⚡</div>
+
+                    <h3>Nitro Discord</h3>
+
+                    <p>
+                        Produto digital com entrega rápida.
+                    </p>
+
+                    <strong>R$ 00,00</strong>
+
+<button onclick="adicionarCarrinho('Nitro Discord', 10)">
+    COMPRAR
+</button>
+                </div>
+
+                <div class="card">
+                    <div class="icone">🚀</div>
+
+                    <h3>Impulsos Discord</h3>
+
+                    <p>
+                        Impulsione seu servidor.
+                    </p>
+
+                    <strong>R$ 00,00</strong>
+
+  <button onclick="adicionarCarrinho('Impulsos Discord', 15)">
+    COMPRAR
+</button>
+                </div>
+
+                <div class="card">
+                    <div class="icone">💎</div>
+
+                    <h3>Produto Digital</h3>
+
+                    <p>
+                        Produto digital com entrega automática.
+                    </p>
+
+                    <strong>R$ 00,00</strong>
+<button onclick="adicionarCarrinho('Produto Digital', 20)">
+    COMPRAR
+</button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer id="contato">
+        <p>© 2026 HYPE STORE — Todos os direitos reservados.</p>
+    <div id="carrinho" class="carrinho">
+
+    <div class="carrinho-conteudo">
+
+        <button class="fechar" onclick="fecharCarrinho()">✕</button>
+
+        <h2>Seu Carrinho</h2>
+
+        <div id="lista-carrinho"></div>
+
+        <div class="resumo">
+
+            <span>Total:</span>
+
+            <strong id="total-carrinho">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+        <button class="finalizar" onclick="finalizarCompra()">
+            FINALIZAR COMPRA
+        </button>
+<div id="checkout" class="checkout">
+
+    <div class="checkout-conteudo">
+
+        <button class="fechar" onclick="fecharCheckout()">✕</button>
+
+        <h2>Finalizar compra</h2>
+
+        <p class="descricao-checkout">
+            Preencha seus dados para continuar.
+        </p>
+
+        <label>Nome</label>
+        <input
+            type="text"
+            id="nome"
+            placeholder="Digite seu nome"
+        >
+
+        <label>Discord</label>
+        <input
+            type="text"
+            id="discord"
+            placeholder="ex: usuario"
+        >
+
+        <label>E-mail</label>
+        <input
+            type="email"
+            id="email"
+            placeholder="seuemail@gmail.com"
+        >
+
+        <div class="pagamento">
+
+            <h3>Forma de pagamento</h3>
+
+            <div class="metodo">
+                <input
+                    type="radio"
+                    name="pagamento"
+                    value="pix"
+                    checked
+                >
+
+                <span>💠 Pix</span>
+            </div>
+
+        </div>
+
+        <div class="resumo-checkout">
+
+            <span>Total da compra</span>
+
+            <strong id="total-checkout">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+        <button class="confirmar" onclick="confirmarPedido()">
+            CONTINUAR PARA PAGAMENTO
+        </button>
+
+    </div>
+
+</div>
+    </div>
+
+</div>
+    </footer>
+<script src="script.js"></script>
+</body>
+</html>

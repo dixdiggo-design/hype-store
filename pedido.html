@@ -1,0 +1,157 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPE STORE - Pedido</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #0b0b0b;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .pedido {
+            width: 100%;
+            max-width: 550px;
+            background: #151515;
+            border: 1px solid #292929;
+            border-radius: 18px;
+            padding: 35px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.08);
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        h1 span {
+            color: #ffc107;
+        }
+
+        .subtitulo {
+            color: #999;
+            margin-bottom: 30px;
+        }
+
+        .numero {
+            background: #0d0d0d;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .numero p {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .numero strong {
+            color: #ffc107;
+            font-size: 22px;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 193, 7, 0.08);
+            color: #ffc107;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+
+        .info {
+            text-align: left;
+            background: #101010;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .info p {
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+
+        .info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .voltar {
+            display: inline-block;
+            text-decoration: none;
+            background: #ffc107;
+            color: #000;
+            padding: 13px 25px;
+            border-radius: 9px;
+            font-weight: bold;
+        }
+
+        .voltar:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="pedido">
+
+        <h1>HYPE <span>STORE</span></h1>
+
+        <p class="subtitulo">
+            Pedido recebido com sucesso!
+        </p>
+
+        <div class="numero">
+            <p>NÚMERO DO PEDIDO</p>
+            <strong id="numero-pedido">---</strong>
+        </div>
+
+        <div class="status">
+            🟡 AGUARDANDO PAGAMENTO
+        </div>
+
+        <div class="info">
+            <p><strong>Próximo passo:</strong></p>
+            <p>
+                Após o pagamento, seu pedido poderá ser processado.
+            </p>
+            <p>
+                Guarde o número do seu pedido.
+            </p>
+        </div>
+
+        <a href="/" class="voltar">
+            VOLTAR PARA A LOJA
+        </a>
+
+    </div>
+
+    <script>
+        const pedido = localStorage.getItem("ultimoPedido");
+
+        if (pedido) {
+            document.getElementById("numero-pedido").textContent = pedido;
+        }
+    </script>
+
+</body>
+</html>
+```
