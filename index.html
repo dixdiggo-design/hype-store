@@ -1,5 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,87 +13,223 @@
 
 <body>
 
-   <header>
-    <div class="logo">HYPE STORE</div>
+    <header class="header">
 
-    <nav>
-        <a href="#">Início</a>
-        <a href="#produtos">Produtos</a>
-        <a href="#contato">Contato</a>
-    </nav>
+        <div class="logo">
+            HYPE<span>STORE</span>
+        </div>
 
-    <button class="botao-carrinho" onclick="abrirCarrinho()">
-        🛒 Carrinho
-        <span id="contador-carrinho">0</span>
-    </button>
-</header>
+        <nav>
+            <a href="#inicio">Início</a>
+            <a href="#produtos">Produtos</a>
+            <a href="#contato">Contato</a>
+            <a href="#suporte">Suporte</a>
+        </nav>
+
+        <button
+            class="carrinho-btn"
+            id="abrir-carrinho"
+            onclick="abrirCarrinho()">
+
+            🛒 Carrinho
+            <span id="contador-carrinho">0</span>
+
+        </button>
+
+    </header>
+
 
     <main>
 
-        <section class="hero">
-            <h1>SUA LOJA DIGITAL</h1>
+        <!-- HERO -->
 
-            <p>
-                Produtos digitais com entrega rápida e segura.
-            </p>
+        <section class="hero" id="inicio">
 
-            <a href="#produtos" class="botao">
-                VER PRODUTOS
-            </a>
+            <div class="hero-conteudo">
+
+                <span class="tag">
+                    ⚡ ENTREGA RÁPIDA
+                </span>
+
+                <h1>
+                    SUA LOJA
+                    <strong>DIGITAL</strong>
+                </h1>
+
+                <p>
+                    Produtos digitais com pagamento seguro,
+                    entrega rápida e suporte.
+                </p>
+
+                <a
+                    href="#produtos"
+                    class="botao-principal">
+
+                    VER PRODUTOS
+
+                </a>
+
+            </div>
+
         </section>
 
-        <section id="produtos" class="produtos">
 
-            <h2>Produtos</h2>
+        <!-- PRODUTOS -->
+
+        <section class="produtos" id="produtos">
+
+            <div class="titulo-secao">
+
+                <span>CATÁLOGO</span>
+
+                <h2>
+                    Nossos Produtos
+                </h2>
+
+                <p>
+                    Escolha seu produto e adicione ao carrinho.
+                </p>
+
+            </div>
+
 
             <div class="cards">
 
-                <div class="card">
-                    <div class="icone">⚡</div>
+                <!-- PRODUTO 1 - NITRO DISCORD -->
 
-                    <h3>Nitro Discord</h3>
+                <article class="card">
 
-                    <p>
-                        Produto digital com entrega rápida.
-                    </p>
+                    <div class="icone">
+                        ⚡
+                    </div>
 
-                    <strong>R$ 00,00</strong>
-
-<button onclick="adicionarCarrinho('Nitro Discord', 10)">
-    COMPRAR
-</button>
-                </div>
-
-                <div class="card">
-                    <div class="icone">🚀</div>
-
-                    <h3>Impulsos Discord</h3>
+                    <h3>
+                        Nitro Discord
+                    </h3>
 
                     <p>
-                        Impulsione seu servidor.
+                        Escolha a duração do seu Nitro.
                     </p>
 
-                    <strong>R$ 00,00</strong>
 
-  <button onclick="adicionarCarrinho('Impulsos Discord', 15)">
-    COMPRAR
-</button>
-                </div>
+                    <button
+                        class="comprar-produto"
+                        onclick="adicionarCarrinho('Nitro Discord', 4.50, 'Anual')">
 
-                <div class="card">
-                    <div class="icone">💎</div>
+                        Nitro Anual — R$ 4,50
 
-                    <h3>Produto Digital</h3>
+                    </button>
+
+
+                    <button
+                        class="comprar-produto"
+                        onclick="adicionarCarrinho('Nitro Discord', 2.50, 'Mensal')">
+
+                        Nitro Mensal — R$ 2,50
+
+                    </button>
+
+                </article>
+
+
+                <!-- PRODUTO 2 -->
+
+                <article class="card">
+
+                    <div class="icone">
+                        🚀
+                    </div>
+
+                    <h3>
+                        Impulsos Discord
+                    </h3>
+
+                    <p>
+                        Impulsione seu servidor de forma rápida.
+                    </p>
+
+                    <div class="preco">
+                        R$ 15,00
+                    </div>
+
+                    <button
+                        class="comprar-produto"
+                        data-nome="Impulsos Discord"
+                        data-preco="15"
+                        onclick="adicionarCarrinho('Impulsos Discord', 15)">
+
+                        COMPRAR
+
+                    </button>
+
+                </article>
+
+
+                <!-- PRODUTO 3 -->
+
+                <article class="card">
+
+                    <div class="icone">
+                        💎
+                    </div>
+
+                    <h3>
+                        Produto Digital
+                    </h3>
 
                     <p>
                         Produto digital com entrega automática.
                     </p>
 
-                    <strong>R$ 00,00</strong>
-<button onclick="adicionarCarrinho('Produto Digital', 20)">
-    COMPRAR
-</button>
+                    <div class="preco">
+                        R$ 20,00
+                    </div>
+
+                    <button
+                        class="comprar-produto"
+                        data-nome="Produto Digital"
+                        data-preco="20"
+                        onclick="adicionarCarrinho('Produto Digital', 20)">
+
+                        COMPRAR
+
+                    </button>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- SUPORTE -->
+
+        <section id="suporte" class="suporte">
+
+            <div class="suporte-container">
+
+                <div class="suporte-icone">
+                    💬
                 </div>
+
+                <h2>
+                    Precisa de ajuda?
+                </h2>
+
+                <p>
+                    Nossa equipe está pronta para ajudar você.
+                    Entre no nosso servidor do Discord e fale com o suporte.
+                </p>
+
+                <a
+                    href="https://discord.gg/4EBt7cpNW3"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="botao-suporte">
+
+                    ENTRAR NO SUPORTE
+
+                </a>
 
             </div>
 
@@ -99,102 +237,302 @@
 
     </main>
 
+
+    <!-- CONTATO / RODAPÉ -->
+
     <footer id="contato">
-        <p>© 2026 HYPE STORE — Todos os direitos reservados.</p>
-    <div id="carrinho" class="carrinho">
 
-    <div class="carrinho-conteudo">
+        <div class="footer-logo">
+            HYPE STORE
+        </div>
 
-        <button class="fechar" onclick="fecharCarrinho()">✕</button>
+        <p>
+            Produtos digitais com entrega rápida e segura.
+        </p>
 
-        <h2>Seu Carrinho</h2>
+        <small>
+            © 2026 HYPE STORE — Todos os direitos reservados.
+        </small>
 
-        <div id="lista-carrinho"></div>
+    </footer>
 
-        <div class="resumo">
 
-            <span>Total:</span>
+    <!-- CARRINHO -->
 
-            <strong id="total-carrinho">
-                R$ 0,00
-            </strong>
+    <div
+        class="modal"
+        id="modal-carrinho">
+
+        <div class="modal-conteudo">
+
+            <button
+                class="fechar"
+                id="fechar-carrinho"
+                onclick="fecharCarrinho()">
+
+                ✕
+
+            </button>
+
+            <h2>
+                Seu Carrinho
+            </h2>
+
+            <div id="lista-carrinho"></div>
+
+            <div class="total">
+
+                <span>
+                    Total
+                </span>
+
+                <strong id="total-carrinho">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+            <button
+                class="finalizar"
+                id="finalizar-compra"
+                onclick="abrirCheckout()">
+
+                FINALIZAR COMPRA
+
+            </button>
 
         </div>
 
-        <button class="finalizar" onclick="finalizarCompra()">
-            FINALIZAR COMPRA
-        </button>
-<div id="checkout" class="checkout">
+    </div>
 
-    <div class="checkout-conteudo">
 
-        <button class="fechar" onclick="fecharCheckout()">✕</button>
+    <!-- CHECKOUT -->
 
-        <h2>Finalizar compra</h2>
+    <div
+        class="modal"
+        id="modal-checkout">
 
-        <p class="descricao-checkout">
-            Preencha seus dados para continuar.
-        </p>
+        <div class="modal-conteudo checkout">
 
-        <label>Nome</label>
-        <input
-            type="text"
-            id="nome"
-            placeholder="Digite seu nome"
-        >
+            <button
+                class="fechar"
+                id="fechar-checkout"
+                onclick="fecharCheckout()">
 
-        <label>Discord</label>
-        <input
-            type="text"
-            id="discord"
-            placeholder="ex: usuario"
-        >
+                ✕
 
-        <label>E-mail</label>
-        <input
-            type="email"
-            id="email"
-            placeholder="seuemail@gmail.com"
-        >
+            </button>
 
-        <div class="pagamento">
+            <h2>
+                Finalizar compra
+            </h2>
 
-            <h3>Forma de pagamento</h3>
+            <p>
+                Informe seus dados para continuar.
+            </p>
 
-            <div class="metodo">
+            <label for="nome">
+                Nome
+            </label>
+
+            <input
+                type="text"
+                id="nome"
+                placeholder="Digite seu nome">
+
+
+            <label for="discord">
+                Discord
+            </label>
+
+            <input
+                type="text"
+                id="discord"
+                placeholder="Seu usuário do Discord">
+
+
+            <label for="email">
+                E-mail
+            </label>
+
+            <input
+                type="email"
+                id="email"
+                placeholder="seuemail@gmail.com">
+
+
+            <!-- PAGAMENTO -->
+
+            <div class="pagamento">
+
+                <h3>
+                    Forma de pagamento
+                </h3>
+
+                <div class="pix">
+
+                    <span>
+                        💠
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            Pix
+                        </strong>
+
+                        <small>
+                            Pagamento instantâneo
+                        </small>
+
+                    </div>
+
+                    <input
+                        type="radio"
+                        name="pagamento"
+                        value="pix"
+                        checked>
+
+                </div>
+
+            </div>
+
+
+            <!-- TOTAL -->
+
+            <div class="total-checkout">
+
+                <span>
+                    Total
+                </span>
+
+                <strong id="total-checkout">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+
+            <!-- PAGAR -->
+
+            <button
+                class="confirmar"
+                id="btn-pagar-pix"
+                onclick="gerarPagamentoPix()">
+
+                PAGAR COM PIX
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- PAGAMENTO PIX -->
+
+    <div
+        class="modal"
+        id="modal-pix">
+
+        <div class="modal-conteudo pix-pagamento">
+
+            <button
+                class="fechar"
+                id="fechar-pix"
+                onclick="fecharPix()">
+
+                ✕
+
+            </button>
+
+            <h2>
+                Pagamento via Pix
+            </h2>
+
+            <p>
+                Escaneie o QR Code ou copie o código Pix.
+            </p>
+
+
+            <!-- QR CODE -->
+
+            <div id="qr-code-container">
+
+                <img
+                    id="qr-code"
+                    src=""
+                    alt="QR Code Pix"
+                    style="
+                        max-width: 250px;
+                        width: 100%;
+                        display: none;
+                        margin: 20px auto;
+                    ">
+
+                <div class="carregando">
+                    Gerando pagamento...
+                </div>
+
+            </div>
+
+
+            <!-- PIX COPIA E COLA -->
+
+            <div class="copia-pix">
+
                 <input
-                    type="radio"
-                    name="pagamento"
-                    value="pix"
-                    checked
-                >
+                    type="text"
+                    id="pix-copia-cola"
+                    readonly
+                    placeholder="Código Pix">
 
-                <span>💠 Pix</span>
+                <button
+                    id="copiar-pix"
+                    onclick="copiarPix()">
+
+                    COPIAR
+
+                </button>
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div
+                class="status-pagamento"
+                id="status-pix">
+
+                🟡 Aguardando pagamento...
+
+            </div>
+
+
+            <!-- PEDIDO -->
+
+            <div
+                id="pedido-id"
+                style="margin-top: 10px;">
+            </div>
+
+
+            <!-- MENSAGEM -->
+
+            <div
+                id="mensagem-pagamento"
+                style="margin-top: 15px;">
             </div>
 
         </div>
 
-        <div class="resumo-checkout">
-
-            <span>Total da compra</span>
-
-            <strong id="total-checkout">
-                R$ 0,00
-            </strong>
-
-        </div>
-
-        <button class="confirmar" onclick="confirmarPedido()">
-            CONTINUAR PARA PAGAMENTO
-        </button>
-
     </div>
 
-</div>
-    </div>
 
-</div>
-    </footer>
-<script src="script.js"></script>
+    <!-- JAVASCRIPT -->
+
+    <script src="script.js"></script>
+
 </body>
+
 </html>
