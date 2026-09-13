@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 
 const express = require("express");
 const fs = require("fs");
@@ -93,7 +93,7 @@ function lerEstoque() {
         if (!fs.existsSync(CAMINHO_ESTOQUE)) {
 
             console.error(
-                "ARQUIVO estoque.json NÃO ENCONTRADO."
+                "ARQUIVO estoque.json NÃƒO ENCONTRADO."
             );
 
             return {};
@@ -273,7 +273,7 @@ function entregarProduto(
         return {
             sucesso: false,
             erro:
-                `Estoque do produto "${chaveEstoque}" não encontrado.`
+                `Estoque do produto "${chaveEstoque}" nÃ£o encontrado.`
         };
     }
 
@@ -292,7 +292,7 @@ function entregarProduto(
         return {
             sucesso: false,
             erro:
-                `Produto "${chaveEstoque}" está sem estoque.`
+                `Produto "${chaveEstoque}" estÃ¡ sem estoque.`
         };
     }
 
@@ -326,7 +326,7 @@ function entregarProduto(
         return {
             sucesso: false,
             erro:
-                "Não foi possível atualizar o estoque."
+                "NÃ£o foi possÃ­vel atualizar o estoque."
         };
     }
 
@@ -356,7 +356,7 @@ function criarTransportador() {
     ) {
 
         console.error(
-            "EMAIL_USUARIO ou EMAIL_SENHA_APP não configurados."
+            "EMAIL_USUARIO ou EMAIL_SENHA_APP nÃ£o configurados."
         );
 
         return null;
@@ -391,7 +391,7 @@ async function enviarEmailProduto(
     }
 
     const texto = `
-Olá!
+OlÃ¡!
 
 Seu pagamento foi confirmado com sucesso.
 
@@ -401,7 +401,7 @@ ${pedido.id}
 PRODUTO:
 ${pedido.produto || "Produto digital"}
 
-${pedido.opcao ? `OPÇÃO:\n${pedido.opcao}\n` : ""}
+${pedido.opcao ? `OPÃ‡ÃƒO:\n${pedido.opcao}\n` : ""}
 
 DADOS DE ACESSO:
 
@@ -516,7 +516,7 @@ app.get(
             return res.status(404).json({
                 sucesso: false,
                 erro:
-                    "Pedido não encontrado."
+                    "Pedido nÃ£o encontrado."
             });
         }
 
@@ -676,7 +676,7 @@ app.post(
                 return res.status(400).json({
                     sucesso: false,
                     erro:
-                        "O valor mínimo do pagamento é R$ 1,50."
+                        "O valor mÃ­nimo do pagamento Ã© R$ 1,50."
                 });
             }
 
@@ -692,7 +692,7 @@ app.post(
 
 
             // ==========================================
-            // DIAGNÓSTICO DO ESTOQUE
+            // DIAGNÃ“STICO DO ESTOQUE
             // ==========================================
 
             console.log("");
@@ -700,7 +700,7 @@ app.post(
                 "=========================================="
             );
             console.log(
-                "       DIAGNÓSTICO DO ESTOQUE"
+                "       DIAGNÃ“STICO DO ESTOQUE"
             );
             console.log(
                 "=========================================="
@@ -721,7 +721,7 @@ app.post(
             );
 
             console.log(
-                "OPÇÃO:",
+                "OPÃ‡ÃƒO:",
                 dadosProduto.opcao
             );
 
@@ -731,7 +731,7 @@ app.post(
             );
 
             console.log(
-                "ESTOQUE DISPONÍVEL:",
+                "ESTOQUE DISPONÃVEL:",
                 existeEstoqueDisponivel(
                     dadosProduto.chaveEstoque
                 )
@@ -750,7 +750,7 @@ app.post(
                 return res.status(400).json({
                     sucesso: false,
                     erro:
-                        "Produto não informado."
+                        "Produto nÃ£o informado."
                 });
             }
 
@@ -768,7 +768,7 @@ app.post(
                 return res.status(400).json({
                     sucesso: false,
                     erro:
-                        `O produto "${dadosProduto.chaveEstoque}" está sem estoque.`
+                        `O produto "${dadosProduto.chaveEstoque}" estÃ¡ sem estoque.`
                 });
             }
 
@@ -915,7 +915,7 @@ app.post(
                     erro:
                         dados.message ||
                         dados.error ||
-                        "Erro ao criar cobrança PIX."
+                        "Erro ao criar cobranÃ§a PIX."
                 });
             }
 
@@ -965,31 +965,14 @@ app.post(
             // ==========================================
 
             return res.json({
-
-                sucesso: true,
-
-                pedidoId,
-
-                chargeId:
-                    dados.id,
-
-                qrCode:
-                    dados.qrCode ||
-                    dados.qr_code ||
-                    dados.qrcode ||
-                    "",
-
-                copyPaste:
-                    dados.copyPaste ||
-                    dados.copy_paste ||
-                    dados.pixCopiaECola ||
-                    dados.brCode ||
-                    "",
-
-                status:
-                    dados.status ||
-                    "PENDING"
-            });
+    sucesso: true,
+    pedidoId,
+    chargeId: dados.id,
+    qrCode: dados.pix.qrCode,
+    copyPaste: dados.pix.copyPaste,
+    expiresAt: dados.pix.expiresAt,
+    status: dados.status || "PENDING"
+});
 
 
         } catch (erro) {
@@ -1105,7 +1088,7 @@ app.get(
                     chargeId,
 
                     mensagem:
-                        "Pagamento consultado, mas pedido não encontrado."
+                        "Pagamento consultado, mas pedido nÃ£o encontrado."
                 });
             }
 
@@ -1117,7 +1100,7 @@ app.get(
 
 
             // ==========================================
-            // PAGAMENTO AINDA NÃO FOI PAGO
+            // PAGAMENTO AINDA NÃƒO FOI PAGO
             // ==========================================
 
             if (
@@ -1180,7 +1163,7 @@ app.get(
 
 
                 // ==========================================
-                // CASO JÁ TENHA SIDO ENTREGUE
+                // CASO JÃ TENHA SIDO ENTREGUE
                 // ==========================================
 
                 if (
@@ -1401,7 +1384,7 @@ app.get(
                     sucesso: false,
 
                     erro:
-                        "E-mail não configurado."
+                        "E-mail nÃ£o configurado."
                 });
             }
 
@@ -1475,10 +1458,10 @@ app.listen(
             "PIX TURBOFYPAY ATIVO"
         );
         console.log(
-            "ESTOQUE AUTOMÁTICO ATIVO"
+            "ESTOQUE AUTOMÃTICO ATIVO"
         );
         console.log(
-            "E-MAIL AUTOMÁTICO ATIVO"
+            "E-MAIL AUTOMÃTICO ATIVO"
         );
         console.log(
             "=========================================="
@@ -1486,3 +1469,4 @@ app.listen(
         console.log("");
     }
 );
+
