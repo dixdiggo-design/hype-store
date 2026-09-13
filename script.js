@@ -1,1488 +1,605 @@
-require("dotenv").config();
+// ==========================================
+// HYPE STORE - SCRIPT DO SITE
+// ==========================================
 
-const express = require("express");
-const fs = require("fs");
-const nodemailer = require("nodemailer");
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-app.use(express.static(__dirname));
-
-const CAMINHO_PEDIDOS = "./pedidos.json";
-const CAMINHO_ESTOQUE = "./estoque.json";
-
-const TURBOFY_API = "https://api.turbofypay.com";
-
-const pedidosEmProcessamento = new Set();
+let carrinho = [];
 
 
 // ==========================================
-// LER PEDIDOS
+// CARRINHO
 // ==========================================
 
-function lerPedidos() {
-    try {
-        if (!fs.existsSync(CAMINHO_PEDIDOS)) {
-            return [];
-        }
+function adicionarCarrinho(nome, preco, opcao = "") {
 
-        const dados = fs.readFileSync(
-            CAMINHO_PEDIDOS,
-            "utf8"
-        );
+    const produto = {
+        nome: nome,
+        preco: Number(preco),
+        opcao: opcao
+    };
 
-        if (!dados.trim()) {
-            return [];
-        }
+    carrinho.push(produto);
 
-        return JSON.parse(dados);
+    atualizarCarrinho();
 
-    } catch (erro) {
+    abrirCarrinho();
+}
 
-        console.error(
-            "ERRO AO LER PEDIDOS:",
-            erro
-        );
 
-        return [];
+// ==========================================
+// ATUALIZAR CARRINHO
+// ==========================================
+
+function atualizarCarrinho() {
+
+    const lista = document.getElementById("lista-carrinho");
+    const contador = document.getElementById("contador-carrinho");
+    const total = document.getElementById("total-carrinho");
+    const totalCheckout = document.getElementById("total-checkout");
+
+    if (contador) {
+        contador.textContent = carrinho.length;
+    }
+
+    if (!lista) {
+        return;
+    }
+
+    lista.innerHTML = "";
+
+    if (carrinho.length === 0) {
+
+        lista.innerHTML = `
+            <p style="text-align:center;">
+                Seu carrinho está vazio.
+            </p>
+        `;
+
+    } else {
+
+        carrinho.forEach((produto, index) => {
+
+            const item = document.createElement("div");
+
+            item.className = "item-carrinho";
+
+            item.innerHTML = `
+                <div>
+                    <strong>${produto.nome}</strong>
+                    ${
+                        produto.opcao
+                            ? `<small>${produto.opcao}</small>`
+                            : ""
+                    }
+                </div>
+
+                <div>
+                    <span>
+                        R$ ${produto.preco.toFixed(2).replace(".", ",")}
+                    </span>
+
+                    <button
+                        type="button"
+                        onclick="removerProduto(${index})">
+                        ❌
+                    </button>
+                </div>
+            `;
+
+            lista.appendChild(item);
+        });
+    }
+
+    const valorTotal = carrinho.reduce(
+        (soma, produto) => soma + Number(produto.preco),
+        0
+    );
+
+    if (total) {
+        total.textContent =
+            `R$ ${valorTotal.toFixed(2).replace(".", ",")}`;
+    }
+
+    if (totalCheckout) {
+        totalCheckout.textContent =
+            `R$ ${valorTotal.toFixed(2).replace(".", ",")}`;
     }
 }
 
 
 // ==========================================
-// SALVAR PEDIDOS
+// REMOVER PRODUTO
 // ==========================================
 
-function salvarPedidos(pedidos) {
-    try {
+function removerProduto(index) {
 
-        fs.writeFileSync(
-            CAMINHO_PEDIDOS,
-            JSON.stringify(
-                pedidos,
-                null,
-                2
-            ),
-            "utf8"
-        );
+    carrinho.splice(index, 1);
 
-        return true;
+    atualizarCarrinho();
+}
 
-    } catch (erro) {
 
-        console.error(
-            "ERRO AO SALVAR PEDIDOS:",
-            erro
-        );
+// ==========================================
+// ABRIR CARRINHO
+// ==========================================
 
-        return false;
+function abrirCarrinho() {
+
+    const modal =
+        document.getElementById("modal-carrinho");
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add("ativo");
+
+    atualizarCarrinho();
+}
+
+
+// ==========================================
+// FECHAR CARRINHO
+// ==========================================
+
+function fecharCarrinho() {
+
+    const modal =
+        document.getElementById("modal-carrinho");
+
+    if (modal) {
+        modal.classList.remove("ativo");
     }
 }
 
 
 // ==========================================
-// LER ESTOQUE
+// ABRIR CHECKOUT
 // ==========================================
 
-function lerEstoque() {
+function abrirCheckout() {
+
+    if (carrinho.length === 0) {
+
+        alert("Seu carrinho está vazio.");
+
+        return;
+    }
+
+    fecharCarrinho();
+
+    const modal =
+        document.getElementById("modal-checkout");
+
+    if (modal) {
+        modal.classList.add("ativo");
+    }
+
+    atualizarTotalCheckout();
+}
+
+
+// ==========================================
+// FECHAR CHECKOUT
+// ==========================================
+
+function fecharCheckout() {
+
+    const modal =
+        document.getElementById("modal-checkout");
+
+    if (modal) {
+        modal.classList.remove("ativo");
+    }
+}
+
+
+// ==========================================
+// TOTAL DO CHECKOUT
+// ==========================================
+
+function atualizarTotalCheckout() {
+
+    const totalCheckout =
+        document.getElementById("total-checkout");
+
+    if (!totalCheckout) {
+        return;
+    }
+
+    const total = carrinho.reduce(
+        (soma, produto) =>
+            soma + Number(produto.preco),
+        0
+    );
+
+    totalCheckout.textContent =
+        `R$ ${total.toFixed(2).replace(".", ",")}`;
+}
+
+
+// ==========================================
+// GERAR PAGAMENTO PIX
+// ==========================================
+
+async function gerarPagamentoPix() {
+
+    if (carrinho.length === 0) {
+
+        alert("Seu carrinho está vazio.");
+
+        return;
+    }
+
+    const nome =
+        document.getElementById("nome")?.value.trim();
+
+    const discord =
+        document.getElementById("discord")?.value.trim();
+
+    const email =
+        document.getElementById("email")?.value.trim();
+
+    if (!nome) {
+
+        alert("Digite seu nome.");
+
+        return;
+    }
+
+    if (!discord) {
+
+        alert("Digite seu Discord.");
+
+        return;
+    }
+
+    if (!email) {
+
+        alert("Digite seu e-mail.");
+
+        return;
+    }
+
+    const valor = carrinho.reduce(
+        (soma, produto) =>
+            soma + Number(produto.preco),
+        0
+    );
+
+    const modalPix =
+        document.getElementById("modal-pix");
+
+    const loading =
+        document.querySelector(".carregando");
+
+    const qrCode =
+        document.getElementById("qr-code");
+
+    const copiaCola =
+        document.getElementById("pix-copia-cola");
+
+    const statusPix =
+        document.getElementById("status-pix");
+
+    const pedidoId =
+        document.getElementById("pedido-id");
+
+    const mensagem =
+        document.getElementById("mensagem-pagamento");
+
+    const botao =
+        document.getElementById("btn-pagar-pix");
+
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent = "GERANDO PIX...";
+    }
+
+    if (modalPix) {
+        modalPix.classList.add("ativo");
+    }
+
+    if (loading) {
+        loading.style.display = "block";
+    }
+
+    if (qrCode) {
+        qrCode.style.display = "none";
+        qrCode.src = "";
+    }
+
+    if (copiaCola) {
+        copiaCola.value = "";
+    }
+
+    if (statusPix) {
+        statusPix.textContent =
+            "Gerando pagamento PIX...";
+    }
 
     try {
 
-        if (!fs.existsSync(CAMINHO_ESTOQUE)) {
+        const resposta = await fetch(
+            "/api/pagamento/pix",
+            {
+                method: "POST",
 
-            console.error(
-                "ARQUIVO estoque.json NÃO ENCONTRADO."
-            );
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-            return {};
-        }
+                body: JSON.stringify({
+                    nome: nome,
+                    discord: discord,
+                    email: email,
+                    itens: carrinho,
+                    valor: valor
+                })
+            }
+        );
 
         const dados =
-            fs.readFileSync(
-                CAMINHO_ESTOQUE,
-                "utf8"
-            );
-
-        if (!dados.trim()) {
-            return {};
-        }
-
-        return JSON.parse(dados);
-
-    } catch (erro) {
-
-        console.error(
-            "ERRO AO LER ESTOQUE:",
-            erro
-        );
-
-        return {};
-    }
-}
-
-
-// ==========================================
-// SALVAR ESTOQUE
-// ==========================================
-
-function salvarEstoque(estoque) {
-
-    try {
-
-        fs.writeFileSync(
-            CAMINHO_ESTOQUE,
-            JSON.stringify(
-                estoque,
-                null,
-                2
-            ),
-            "utf8"
-        );
-
-        return true;
-
-    } catch (erro) {
-
-        console.error(
-            "ERRO AO SALVAR ESTOQUE:",
-            erro
-        );
-
-        return false;
-    }
-}
-
-
-// ==========================================
-// IDENTIFICAR PRODUTO
-// ==========================================
-
-function obterDadosProduto(itens) {
-
-    const item =
-        Array.isArray(itens) &&
-        itens.length > 0
-            ? itens[0]
-            : {};
-
-    const nomeProduto =
-        String(
-            item.nome || ""
-        ).trim();
-
-    const opcao =
-        String(
-            item.opcao || ""
-        ).trim();
-
-    let chaveEstoque =
-        nomeProduto;
-
-    if (
-        nomeProduto.toLowerCase() ===
-        "nitro discord"
-    ) {
-
-        if (
-            opcao.toLowerCase() ===
-            "anual"
-        ) {
-
-            chaveEstoque =
-                "Nitro Discord Anual";
-
-        } else if (
-            opcao.toLowerCase() ===
-            "mensal"
-        ) {
-
-            chaveEstoque =
-                "Nitro Discord Mensal";
-        }
-    }
-
-    return {
-        nomeProduto,
-        opcao,
-        chaveEstoque
-    };
-}
-
-
-// ==========================================
-// VERIFICAR ESTOQUE
-// ==========================================
-
-function existeEstoqueDisponivel(
-    chaveEstoque
-) {
-
-    const estoque =
-        lerEstoque();
-
-    if (
-        !estoque ||
-        !Array.isArray(
-            estoque[chaveEstoque]
-        )
-    ) {
-
-        return false;
-    }
-
-    return estoque[
-        chaveEstoque
-    ].some(
-        conta =>
-            conta &&
-            conta.status ===
-                "disponivel"
-    );
-}
-
-
-// ==========================================
-// ENTREGAR PRODUTO
-// ==========================================
-
-function entregarProduto(
-    pedido
-) {
-
-    const estoque =
-        lerEstoque();
-
-    const dadosProduto =
-        obterDadosProduto(
-            pedido.itens
-        );
-
-    const chaveEstoque =
-        pedido.chaveEstoque ||
-        dadosProduto.chaveEstoque;
-
-    if (
-        !estoque ||
-        !Array.isArray(
-            estoque[chaveEstoque]
-        )
-    ) {
-
-        return {
-            sucesso: false,
-            erro:
-                `Estoque do produto "${chaveEstoque}" não encontrado.`
-        };
-    }
-
-    const indice =
-        estoque[
-            chaveEstoque
-        ].findIndex(
-            conta =>
-                conta &&
-                conta.status ===
-                    "disponivel"
-        );
-
-    if (indice === -1) {
-
-        return {
-            sucesso: false,
-            erro:
-                `Produto "${chaveEstoque}" está sem estoque.`
-        };
-    }
-
-    const conta =
-        estoque[
-            chaveEstoque
-        ][indice];
-
-    estoque[
-        chaveEstoque
-    ][indice].status =
-        "vendida";
-
-    estoque[
-        chaveEstoque
-    ][indice].vendidaEm =
-        new Date().toISOString();
-
-    estoque[
-        chaveEstoque
-    ][indice].pedidoId =
-        pedido.id;
-
-    const salvo =
-        salvarEstoque(
-            estoque
-        );
-
-    if (!salvo) {
-
-        return {
-            sucesso: false,
-            erro:
-                "Não foi possível atualizar o estoque."
-        };
-    }
-
-    return {
-        sucesso: true,
-        email:
-            conta.email ||
-            conta.login ||
-            "",
-        senha:
-            conta.senha ||
-            conta.password ||
-            ""
-    };
-}
-
-
-// ==========================================
-// EMAIL
-// ==========================================
-
-function criarTransportador() {
-
-    if (
-        !process.env.EMAIL_USUARIO ||
-        !process.env.EMAIL_SENHA_APP
-    ) {
-
-        console.error(
-            "EMAIL_USUARIO ou EMAIL_SENHA_APP não configurados."
-        );
-
-        return null;
-    }
-
-    return nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user:
-                process.env.EMAIL_USUARIO,
-            pass:
-                process.env.EMAIL_SENHA_APP
-        }
-    });
-}
-
-
-// ==========================================
-// ENVIAR PRODUTO POR EMAIL
-// ==========================================
-
-async function enviarEmailProduto(
-    pedido,
-    entrega
-) {
-
-    const transporter =
-        criarTransportador();
-
-    if (!transporter) {
-        return false;
-    }
-
-    const texto = `
-Olá!
-
-Seu pagamento foi confirmado com sucesso.
-
-PEDIDO:
-${pedido.id}
-
-PRODUTO:
-${pedido.produto || "Produto digital"}
-
-${pedido.opcao ? `OPÇÃO:\n${pedido.opcao}\n` : ""}
-
-DADOS DE ACESSO:
-
-E-mail/Login:
-${entrega.email}
-
-Senha:
-${entrega.senha}
-
-Obrigado por comprar na HYPE STORE!
-`;
-
-    try {
-
-        await transporter.sendMail({
-
-            from:
-                `"HYPE STORE" <${process.env.EMAIL_USUARIO}>`,
-
-            to:
-                pedido.email,
-
-            subject:
-                `HYPE STORE - Pedido ${pedido.id} aprovado`,
-
-            text:
-                texto
-        });
+            await resposta.json();
 
         console.log(
-            "E-MAIL ENVIADO PARA:",
-            pedido.email
+            "RESPOSTA DO SERVIDOR:",
+            dados
         );
 
-        return true;
+        if (!resposta.ok || !dados.sucesso) {
+
+            throw new Error(
+                dados.erro ||
+                "Não foi possível gerar o PIX."
+            );
+        }
+
+        if (pedidoId) {
+            pedidoId.textContent =
+                dados.pedidoId || "";
+        }
+
+        // QR CODE TURBOFYPAY
+        if (dados.qrCode && qrCode) {
+
+            qrCode.src =
+                dados.qrCode.startsWith("data:")
+                    ? dados.qrCode
+                    : `data:image/png;base64,${dados.qrCode}`;
+
+            qrCode.style.display = "block";
+        }
+
+        // PIX COPIA E COLA
+        if (copiaCola) {
+
+            copiaCola.value =
+                dados.copyPaste || "";
+        }
+
+        if (loading) {
+            loading.style.display = "none";
+        }
+
+        if (statusPix) {
+
+            statusPix.textContent =
+                "Aguardando pagamento...";
+        }
+
+        if (mensagem) {
+
+            mensagem.textContent =
+                "Escaneie o QR Code ou copie o PIX copia e cola.";
+        }
+
+        // COMEÇA A VERIFICAR O PAGAMENTO
+        if (dados.chargeId) {
+
+            verificarPagamento(
+                dados.chargeId
+            );
+        }
 
     } catch (erro) {
 
         console.error(
-            "ERRO AO ENVIAR E-MAIL:",
+            "ERRO AO GERAR PIX:",
             erro
         );
 
-        return false;
+        if (loading) {
+            loading.style.display = "none";
+        }
+
+        if (statusPix) {
+
+            statusPix.textContent =
+                "Erro ao gerar pagamento.";
+        }
+
+        alert(
+            erro.message ||
+            "Erro ao gerar pagamento."
+        );
+
+    } finally {
+
+        if (botao) {
+
+            botao.disabled = false;
+
+            botao.textContent =
+                "PAGAR COM PIX";
+        }
     }
 }
 
 
 // ==========================================
-// STATUS DO SERVIDOR
+// VERIFICAR PAGAMENTO
 // ==========================================
 
-app.get(
-    "/api/status",
-    (req, res) => {
+async function verificarPagamento(chargeId) {
 
-        res.json({
-            online: true,
-            mensagem:
-                "Servidor da HYPE STORE funcionando!"
-        });
-    }
-);
+    let tentativas = 0;
 
+    const limite =
+        120;
 
-// ==========================================
-// CONSULTAR ESTOQUE
-// ==========================================
+    const intervalo =
+        5000;
 
-app.get(
-    "/api/estoque/:produto",
-    (req, res) => {
+    async function verificar() {
 
-        const produto =
-            decodeURIComponent(
-                req.params.produto
-            );
-
-        const disponivel =
-            existeEstoqueDisponivel(
-                produto
-            );
-
-        res.json({
-            produto,
-            disponivel
-        });
-    }
-);
-
-
-// ==========================================
-// CONSULTAR PEDIDO
-// ==========================================
-
-app.get(
-    "/api/pedidos/:id",
-    (req, res) => {
-
-        const pedidos =
-            lerPedidos();
-
-        const pedido =
-            pedidos.find(
-                item =>
-                    String(item.id) ===
-                    String(req.params.id)
-            );
-
-        if (!pedido) {
-
-            return res.status(404).json({
-                sucesso: false,
-                erro:
-                    "Pedido não encontrado."
-            });
-        }
-
-        res.json({
-            sucesso: true,
-            pedido
-        });
-    }
-);
-
-
-// ==========================================
-// CRIAR PEDIDO
-// ==========================================
-
-app.post(
-    "/api/pedidos",
-    (req, res) => {
-
-        try {
-
-            const {
-                nome,
-                discord,
-                email,
-                itens
-            } = req.body;
-
-            if (
-                !nome ||
-                !discord ||
-                !email ||
-                !Array.isArray(itens) ||
-                itens.length === 0
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Dados do pedido incompletos."
-                });
-            }
-
-            const dadosProduto =
-                obterDadosProduto(
-                    itens
-                );
-
-            const id =
-                `HYPE-${Date.now()}`;
-
-            const pedidos =
-                lerPedidos();
-
-            const pedido = {
-
-                id,
-
-                nome,
-
-                discord,
-
-                email,
-
-                itens,
-
-                produto:
-                    dadosProduto.nomeProduto,
-
-                opcao:
-                    dadosProduto.opcao,
-
-                chaveEstoque:
-                    dadosProduto.chaveEstoque,
-
-                status:
-                    "AGUARDANDO PAGAMENTO",
-
-                criadoEm:
-                    new Date().toISOString()
-            };
-
-            pedidos.push(
-                pedido
-            );
-
-            salvarPedidos(
-                pedidos
-            );
-
-            res.json({
-                sucesso: true,
-                pedidoId: id
-            });
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO AO CRIAR PEDIDO:",
-                erro
-            );
-
-            res.status(500).json({
-                sucesso: false,
-                erro:
-                    "Erro interno ao criar pedido."
-            });
-        }
-    }
-);
-
-
-// ==========================================
-// GERAR PIX TURBOFYPAY
-// ==========================================
-
-app.post(
-    "/api/pagamento/pix",
-    async (req, res) => {
-
-        try {
-
-            const {
-                nome,
-                discord,
-                email,
-                itens,
-                valor
-            } = req.body;
-
-            if (
-                !nome ||
-                !discord ||
-                !email ||
-                !Array.isArray(itens) ||
-                itens.length === 0 ||
-                !valor
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Dados do pagamento incompletos."
-                });
-            }
-
-            const valorNumerico =
-                Number(valor);
-
-            if (
-                !Number.isFinite(
-                    valorNumerico
-                ) ||
-                valorNumerico < 1.50
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "O valor mínimo do pagamento é R$ 1,50."
-                });
-            }
-
-
-            // ==========================================
-            // PRODUTO
-            // ==========================================
-
-            const dadosProduto =
-                obterDadosProduto(
-                    itens
-                );
-
-
-            // ==========================================
-            // DIAGNÓSTICO DO ESTOQUE
-            // ==========================================
-
-            console.log("");
-            console.log(
-                "=========================================="
-            );
-            console.log(
-                "       DIAGNÓSTICO DO ESTOQUE"
-            );
-            console.log(
-                "=========================================="
-            );
-
-            console.log(
-                "ITENS RECEBIDOS:",
-                JSON.stringify(
-                    itens,
-                    null,
-                    2
-                )
-            );
-
-            console.log(
-                "NOME DO PRODUTO:",
-                dadosProduto.nomeProduto
-            );
-
-            console.log(
-                "OPÇÃO:",
-                dadosProduto.opcao
-            );
-
-            console.log(
-                "CHAVE DO ESTOQUE:",
-                dadosProduto.chaveEstoque
-            );
-
-            console.log(
-                "ESTOQUE DISPONÍVEL:",
-                existeEstoqueDisponivel(
-                    dadosProduto.chaveEstoque
-                )
-            );
-
-            console.log(
-                "=========================================="
-            );
-            console.log("");
-
-
-            if (
-                !dadosProduto.nomeProduto
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Produto não informado."
-                });
-            }
-
-
-            // ==========================================
-            // VERIFICAR ESTOQUE
-            // ==========================================
-
-            if (
-                !existeEstoqueDisponivel(
-                    dadosProduto.chaveEstoque
-                )
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        `O produto "${dadosProduto.chaveEstoque}" está sem estoque.`
-                });
-            }
-
-
-            // ==========================================
-            // CRIAR PEDIDO
-            // ==========================================
-
-            const pedidoId =
-                `HYPE-${Date.now()}`;
-
-            const pedidos =
-                lerPedidos();
-
-            const novoPedido = {
-
-                id:
-                    pedidoId,
-
-                nome,
-
-                discord,
-
-                email,
-
-                itens,
-
-                produto:
-                    dadosProduto.nomeProduto,
-
-                opcao:
-                    dadosProduto.opcao,
-
-                chaveEstoque:
-                    dadosProduto.chaveEstoque,
-
-                valor:
-                    valorNumerico,
-
-                status:
-                    "AGUARDANDO PAGAMENTO",
-
-                criadoEm:
-                    new Date().toISOString()
-            };
-
-            pedidos.push(
-                novoPedido
-            );
-
-            salvarPedidos(
-                pedidos
-            );
-
-
-            // ==========================================
-            // VALOR EM CENTAVOS
-            // ==========================================
-
-            const amountCents =
-                Math.round(
-                    valorNumerico * 100
-                );
-
-
-            // ==========================================
-            // TURBOFYPAY
-            // ==========================================
-
-            const resposta =
-                await fetch(
-                    `${TURBOFY_API}/sellers/pix`,
-                    {
-                        method: "POST",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json",
-
-                            "x-client-id":
-                                process.env.TURBOFY_CLIENT_ID,
-
-                            "x-client-secret":
-                                process.env.TURBOFY_CLIENT_SECRET,
-
-                            "x-idempotency-key":
-                                pedidoId
-                        },
-
-                        body:
-                            JSON.stringify({
-
-                                amountCents,
-
-                                description:
-                                    `Pedido ${pedidoId} - ${dadosProduto.nomeProduto}${dadosProduto.opcao ? ` ${dadosProduto.opcao}` : ""}`,
-
-                                externalRef:
-                                    pedidoId,
-
-                                metadata: {
-
-                                    pedidoId,
-
-                                    produto:
-                                        dadosProduto.nomeProduto,
-
-                                    opcao:
-                                        dadosProduto.opcao
-                                }
-                            })
-                    }
-                );
-
-
-            const dados =
-                await resposta.json();
-
-
-            console.log(
-                "RESPOSTA TURBOFYPAY:",
-                JSON.stringify(
-                    dados,
-                    null,
-                    2
-                )
-            );
-
-
-            if (!resposta.ok) {
-
-                console.error(
-                    "ERRO TURBOFYPAY:",
-                    dados
-                );
-
-                return res.status(
-                    resposta.status
-                ).json({
-
-                    sucesso: false,
-
-                    erro:
-                        dados.message ||
-                        dados.error ||
-                        "Erro ao criar cobrança PIX."
-                });
-            }
-
-
-            // ==========================================
-            // SALVAR DADOS DO PAGAMENTO
-            // ==========================================
-
-            const pedidosAtualizados =
-                lerPedidos();
-
-            const indicePedido =
-                pedidosAtualizados.findIndex(
-                    pedido =>
-                        pedido.id ===
-                        pedidoId
-                );
-
-            if (
-                indicePedido !== -1
-            ) {
-
-                pedidosAtualizados[
-                    indicePedido
-                ].chargeId =
-                    dados.id;
-
-                pedidosAtualizados[
-                    indicePedido
-                ].statusPagamento =
-                    dados.status ||
-                    "PENDING";
-
-                pedidosAtualizados[
-                    indicePedido
-                ].pix =
-                    dados;
-
-                salvarPedidos(
-                    pedidosAtualizados
-                );
-            }
-
-
-            // ==========================================
-            // RESPOSTA PARA O SITE
-            // ==========================================
-
-            return res.json({
-
-                sucesso: true,
-
-                pedidoId,
-
-                chargeId:
-                    dados.id,
-
-                qrCode:
-                    dados.qrCode ||
-                    dados.qr_code ||
-                    dados.qrcode ||
-                    "",
-
-                copyPaste:
-                    dados.copyPaste ||
-                    dados.copy_paste ||
-                    dados.pixCopiaECola ||
-                    dados.brCode ||
-                    "",
-
-                status:
-                    dados.status ||
-                    "PENDING"
-            });
-
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO AO GERAR PIX:",
-                erro
-            );
-
-            return res.status(500).json({
-
-                sucesso: false,
-
-                erro:
-                    erro.message ||
-                    "Erro interno ao gerar pagamento PIX."
-            });
-        }
-    }
-);
-
-
-// ==========================================
-// VERIFICAR STATUS DO PIX
-// ==========================================
-
-app.get(
-    "/api/pagamento/status/:chargeId",
-    async (req, res) => {
-
-        const chargeId =
-            req.params.chargeId;
+        tentativas++;
 
         try {
 
             const resposta =
                 await fetch(
-                    `${TURBOFY_API}/sellers/pix/${chargeId}`,
-                    {
-                        method: "GET",
-
-                        headers: {
-
-                            "x-client-id":
-                                process.env.TURBOFY_CLIENT_ID,
-
-                            "x-client-secret":
-                                process.env.TURBOFY_CLIENT_SECRET
-                        }
-                    }
+                    `/api/pagamento/status/${chargeId}`
                 );
-
 
             const dados =
                 await resposta.json();
 
-
             console.log(
-                "STATUS TURBOFYPAY:",
-                JSON.stringify(
-                    dados,
-                    null,
-                    2
-                )
+                "STATUS DO PAGAMENTO:",
+                dados
             );
 
-
-            if (!resposta.ok) {
-
-                return res.status(
-                    resposta.status
-                ).json({
-
-                    sucesso: false,
-
-                    erro:
-                        dados.message ||
-                        dados.error ||
-                        "Erro ao consultar pagamento."
-                });
-            }
-
-
-            const status =
-                String(
-                    dados.status ||
-                    ""
-                ).toUpperCase();
-
-
-            const pedidos =
-                lerPedidos();
-
-
-            const indicePedido =
-                pedidos.findIndex(
-                    pedido =>
-                        pedido.chargeId ===
-                        chargeId
+            const statusPix =
+                document.getElementById(
+                    "status-pix"
                 );
 
-
             if (
-                indicePedido === -1
+                dados.status === "PAID" ||
+                dados.status === "PAGO"
             ) {
 
-                return res.json({
+                if (statusPix) {
 
-                    sucesso: true,
-
-                    status,
-
-                    chargeId,
-
-                    mensagem:
-                        "Pagamento consultado, mas pedido não encontrado."
-                });
-            }
-
-
-            const pedido =
-                pedidos[
-                    indicePedido
-                ];
-
-
-            // ==========================================
-            // PAGAMENTO AINDA NÃO FOI PAGO
-            // ==========================================
-
-            if (
-                status !== "PAID"
-            ) {
-
-                pedido.statusPagamento =
-                    status;
-
-                salvarPedidos(
-                    pedidos
-                );
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status,
-
-                    chargeId
-                });
-            }
-
-
-            // ==========================================
-            // EVITAR PROCESSAMENTO DUPLICADO
-            // ==========================================
-
-            if (
-                pedidosEmProcessamento.has(
-                    pedido.id
-                )
-            ) {
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status: "PAID",
-
-                    chargeId,
-
-                    processando: true
-                });
-            }
-
-
-            pedidosEmProcessamento.add(
-                pedido.id
-            );
-
-
-            try {
-
-                pedido.statusPagamento =
-                    "PAID";
-
-                pedido.status =
-                    "PAGO";
-
-
-                // ==========================================
-                // CASO JÁ TENHA SIDO ENTREGUE
-                // ==========================================
-
-                if (
-                    pedido.contaEntregue
-                ) {
-
-                    let emailEnviado =
-                        pedido.emailEnviado ||
-                        false;
-
-
-                    if (
-                        !emailEnviado
-                    ) {
-
-                        const entrega = {
-
-                            email:
-                                pedido.contaEmail ||
-                                "",
-
-                            senha:
-                                pedido.contaSenha ||
-                                ""
-                        };
-
-
-                        emailEnviado =
-                            await enviarEmailProduto(
-                                pedido,
-                                entrega
-                            );
-
-
-                        pedido.emailEnviado =
-                            emailEnviado;
-
-                        pedido.emailEnviadoEm =
-                            emailEnviado
-                                ? new Date().toISOString()
-                                : null;
-                    }
-
-
-                    salvarPedidos(
-                        pedidos
-                    );
-
-
-                    return res.json({
-
-                        sucesso: true,
-
-                        status: "PAID",
-
-                        chargeId,
-
-                        entregue: true,
-
-                        emailEnviado,
-
-                        conta: {
-
-                            email:
-                                pedido.contaEmail,
-
-                            senha:
-                                pedido.contaSenha
-                        }
-                    });
+                    statusPix.textContent =
+                        "✅ Pagamento confirmado!";
                 }
 
-
-                // ==========================================
-                // ENTREGAR CONTA
-                // ==========================================
-
-                const entrega =
-                    entregarProduto(
-                        pedido
+                const mensagem =
+                    document.getElementById(
+                        "mensagem-pagamento"
                     );
 
+                if (mensagem) {
 
-                if (
-                    !entrega.sucesso
-                ) {
-
-                    pedido.erroEntrega =
-                        entrega.erro;
-
-                    salvarPedidos(
-                        pedidos
-                    );
-
-                    return res.status(500).json({
-
-                        sucesso: false,
-
-                        status: "PAID",
-
-                        chargeId,
-
-                        erro:
-                            entrega.erro
-                    });
+                    mensagem.textContent =
+                        "Pagamento confirmado! Seu produto foi processado.";
                 }
 
-
-                // ==========================================
-                // SALVAR CONTA NO PEDIDO
-                // ==========================================
-
-                pedido.contaEntregue =
-                    true;
-
-                pedido.contaEmail =
-                    entrega.email;
-
-                pedido.contaSenha =
-                    entrega.senha;
-
-                pedido.entregueEm =
-                    new Date().toISOString();
-
-
-                // ==========================================
-                // ENVIAR EMAIL
-                // ==========================================
-
-                const emailEnviado =
-                    await enviarEmailProduto(
-                        pedido,
-                        entrega
-                    );
-
-                pedido.emailEnviado =
-                    emailEnviado;
-
-                pedido.emailEnviadoEm =
-                    emailEnviado
-                        ? new Date().toISOString()
-                        : null;
-
-
-                salvarPedidos(
-                    pedidos
-                );
-
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status: "PAID",
-
-                    chargeId,
-
-                    entregue: true,
-
-                    emailEnviado,
-
-                    conta: {
-
-                        email:
-                            entrega.email,
-
-                        senha:
-                            entrega.senha
-                    }
-                });
-
-
-            } finally {
-
-                pedidosEmProcessamento.delete(
-                    pedido.id
-                );
+                return;
             }
 
+            if (
+                tentativas >= limite
+            ) {
+
+                if (statusPix) {
+
+                    statusPix.textContent =
+                        "⏱️ Tempo de verificação encerrado. Consulte seu pedido.";
+                }
+
+                return;
+            }
 
         } catch (erro) {
 
             console.error(
-                "ERRO AO CONSULTAR PAGAMENTO:",
+                "ERRO AO VERIFICAR PAGAMENTO:",
                 erro
             );
-
-            return res.status(500).json({
-
-                sucesso: false,
-
-                erro:
-                    erro.message ||
-                    "Erro ao consultar pagamento."
-            });
         }
+
+        setTimeout(
+            verificar,
+            intervalo
+        );
     }
-);
+
+    verificar();
+}
 
 
 // ==========================================
-// TESTE DE EMAIL
+// FECHAR PIX
 // ==========================================
 
-app.get(
-    "/teste-email",
-    async (req, res) => {
+function fecharPix() {
 
-        try {
+    const modal =
+        document.getElementById("modal-pix");
 
-            const transporter =
-                criarTransportador();
-
-            if (!transporter) {
-
-                return res.status(500).json({
-
-                    sucesso: false,
-
-                    erro:
-                        "E-mail não configurado."
-                });
-            }
-
-
-            await transporter.sendMail({
-
-                from:
-                    `"HYPE STORE" <${process.env.EMAIL_USUARIO}>`,
-
-                to:
-                    process.env.EMAIL_USUARIO,
-
-                subject:
-                    "Teste HYPE STORE",
-
-                text:
-                    "Teste de envio de e-mail da HYPE STORE funcionando."
-            });
-
-
-            res.json({
-
-                sucesso: true,
-
-                mensagem:
-                    "E-mail de teste enviado."
-            });
-
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO NO TESTE DE EMAIL:",
-                erro
-            );
-
-            res.status(500).json({
-
-                sucesso: false,
-
-                erro:
-                    erro.message
-            });
-        }
+    if (modal) {
+        modal.classList.remove("ativo");
     }
-);
+}
 
 
 // ==========================================
-// INICIAR SERVIDOR
+// COPIAR PIX
 // ==========================================
 
-app.listen(
-    PORT,
-    () => {
+async function copiarPix() {
 
-        console.log("");
-        console.log(
-            "=========================================="
+    const campo =
+        document.getElementById(
+            "pix-copia-cola"
         );
-        console.log(
-            "          HYPE STORE ONLINE"
+
+    if (!campo || !campo.value) {
+
+        alert(
+            "O PIX copia e cola ainda não foi gerado."
         );
-        console.log(
-            "=========================================="
+
+        return;
+    }
+
+    try {
+
+        await navigator.clipboard.writeText(
+            campo.value
         );
-        console.log(
-            `PORTA: ${PORT}`
+
+        alert(
+            "PIX copia e cola copiado!"
         );
-        console.log(
-            "PIX TURBOFYPAY ATIVO"
+
+    } catch (erro) {
+
+        campo.select();
+
+        document.execCommand("copy");
+
+        alert(
+            "PIX copia e cola copiado!"
         );
+    }
+}
+
+
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        atualizarCarrinho();
+
         console.log(
-            "ESTOQUE AUTOMÁTICO ATIVO"
+            "HYPE STORE: script.js carregado corretamente."
         );
-        console.log(
-            "E-MAIL AUTOMÁTICO ATIVO"
-        );
-        console.log(
-            "=========================================="
-        );
-        console.log("");
     }
 );
