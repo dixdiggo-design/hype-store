@@ -1,44 +1,117 @@
 // ==========================================
-// HYPE STORE - SCRIPT DO SITE
+// HYPE STORE - SCRIPT PRINCIPAL
 // ==========================================
 
 let carrinho = [];
-
+let intervaloPagamento = null;
 
 // ==========================================
-// CARRINHO
+// ELEMENTOS
+// ==========================================
+
+const contadorCarrinho =
+    document.getElementById("contador-carrinho");
+
+const listaCarrinho =
+    document.getElementById("lista-carrinho");
+
+const totalCarrinho =
+    document.getElementById("total-carrinho");
+
+const totalCheckout =
+    document.getElementById("total-checkout");
+
+// ==========================================
+// FORMATAR DINHEIRO
+// ==========================================
+
+function formatarPreco(valor) {
+    return Number(valor).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+    });
+}
+
+// ==========================================
+// ATUALIZAR CONTADOR
+// ==========================================
+
+function atualizarContador() {
+    const contador =
+        document.getElementById("contador-carrinho");
+
+    if (!contador) {
+        return;
+    }
+
+    contador.textContent = carrinho.length;
+}
+
+// ==========================================
+// ADICIONAR AO CARRINHO
 // ==========================================
 
 function adicionarCarrinho(nome, preco, opcao = "") {
-
     const produto = {
-        nome: nome,
+        nome: String(nome).trim(),
         preco: Number(preco),
-        opcao: opcao
+        opcao: String(opcao).trim()
     };
+
+    console.log("PRODUTO ADICIONADO:", produto);
 
     carrinho.push(produto);
 
+    atualizarContador();
     atualizarCarrinho();
 
     abrirCarrinho();
 }
 
+// ==========================================
+// REMOVER PRODUTO
+// ==========================================
+
+function removerProduto(index) {
+    if (
+        index < 0 ||
+        index >= carrinho.length
+    ) {
+        return;
+    }
+
+    carrinho.splice(index, 1);
+
+    atualizarContador();
+    atualizarCarrinho();
+}
+
+// ==========================================
+// CALCULAR TOTAL
+// ==========================================
+
+function calcularTotal() {
+    return carrinho.reduce(
+        (total, produto) => {
+            return total + Number(produto.preco);
+        },
+        0
+    );
+}
 
 // ==========================================
 // ATUALIZAR CARRINHO
 // ==========================================
 
 function atualizarCarrinho() {
+    const lista =
+        document.getElementById("lista-carrinho");
 
-    const lista = document.getElementById("lista-carrinho");
-    const contador = document.getElementById("contador-carrinho");
-    const total = document.getElementById("total-carrinho");
-    const totalCheckout = document.getElementById("total-checkout");
+    const total =
+        document.getElementById("total-carrinho");
 
-    if (contador) {
-        contador.textContent = carrinho.length;
-    }
+    const checkoutTotal =
+        document.getElementById("total-checkout");
 
     if (!lista) {
         return;
@@ -47,120 +120,133 @@ function atualizarCarrinho() {
     lista.innerHTML = "";
 
     if (carrinho.length === 0) {
-
         lista.innerHTML = `
-            <p style="text-align:center;">
-                Seu carrinho está vazio.
-            </p>
+            <div class="carrinho-vazio">
+                <div class="carrinho-vazio-icon">🛒</div>
+                <strong>Seu carrinho está vazio</strong>
+                <p>Adicione um produto para continuar.</p>
+            </div>
         `;
 
-    } else {
+        if (total) {
+            total.textContent = formatarPreco(0);
+        }
 
-        carrinho.forEach((produto, index) => {
+        if (checkoutTotal) {
+            checkoutTotal.textContent = formatarPreco(0);
+        }
 
-            const item = document.createElement("div");
-
-            item.className = "item-carrinho";
-
-            item.innerHTML = `
-                <div>
-                    <strong>${produto.nome}</strong>
-                    ${
-                        produto.opcao
-                            ? `<small>${produto.opcao}</small>`
-                            : ""
-                    }
-                </div>
-
-                <div>
-                    <span>
-                        R$ ${produto.preco.toFixed(2).replace(".", ",")}
-                    </span>
-
-                    <button
-                        type="button"
-                        onclick="removerProduto(${index})">
-                        ❌
-                    </button>
-                </div>
-            `;
-
-            lista.appendChild(item);
-        });
+        return;
     }
 
-    const valorTotal = carrinho.reduce(
-        (soma, produto) => soma + Number(produto.preco),
-        0
-    );
+    let valorTotal = 0;
+
+    carrinho.forEach((produto, index) => {
+        valorTotal += Number(produto.preco);
+
+        const item =
+            document.createElement("div");
+
+        item.className = "item-carrinho";
+
+        item.innerHTML = `
+            <div class="item-carrinho-info">
+
+                <strong>
+                    ${produto.nome}
+                </strong>
+
+                ${
+                    produto.opcao
+                        ? `
+                            <span class="item-carrinho-opcao">
+                                ${produto.opcao}
+                            </span>
+                        `
+                        : ""
+                }
+
+                <span class="item-carrinho-preco">
+                    ${formatarPreco(produto.preco)}
+                </span>
+
+            </div>
+
+            <button
+                class="btn-remover"
+                type="button"
+                onclick="removerProduto(${index})"
+                aria-label="Remover produto"
+            >
+                ×
+            </button>
+        `;
+
+        lista.appendChild(item);
+    });
 
     if (total) {
         total.textContent =
-            `R$ ${valorTotal.toFixed(2).replace(".", ",")}`;
+            formatarPreco(valorTotal);
     }
 
-    if (totalCheckout) {
-        totalCheckout.textContent =
-            `R$ ${valorTotal.toFixed(2).replace(".", ",")}`;
+    if (checkoutTotal) {
+        checkoutTotal.textContent =
+            formatarPreco(valorTotal);
     }
 }
-
-
-// ==========================================
-// REMOVER PRODUTO
-// ==========================================
-
-function removerProduto(index) {
-
-    carrinho.splice(index, 1);
-
-    atualizarCarrinho();
-}
-
 
 // ==========================================
 // ABRIR CARRINHO
 // ==========================================
 
 function abrirCarrinho() {
-
     const modal =
         document.getElementById("modal-carrinho");
 
     if (!modal) {
+        console.error(
+            "Modal do carrinho não encontrado."
+        );
+
         return;
     }
 
-    modal.classList.add("ativo");
-
     atualizarCarrinho();
-}
 
+    modal.style.display = "flex";
+
+    document.body.classList.add(
+        "modal-aberto"
+    );
+}
 
 // ==========================================
 // FECHAR CARRINHO
 // ==========================================
 
 function fecharCarrinho() {
-
     const modal =
         document.getElementById("modal-carrinho");
 
     if (modal) {
-        modal.classList.remove("ativo");
+        modal.style.display = "none";
     }
-}
 
+    document.body.classList.remove(
+        "modal-aberto"
+    );
+}
 
 // ==========================================
 // ABRIR CHECKOUT
 // ==========================================
 
 function abrirCheckout() {
-
     if (carrinho.length === 0) {
-
-        alert("Seu carrinho está vazio.");
+        alert(
+            "Seu carrinho está vazio."
+        );
 
         return;
     }
@@ -170,263 +256,333 @@ function abrirCheckout() {
     const modal =
         document.getElementById("modal-checkout");
 
-    if (modal) {
-        modal.classList.add("ativo");
+    if (!modal) {
+        console.error(
+            "Modal de checkout não encontrado."
+        );
+
+        return;
     }
 
-    atualizarTotalCheckout();
-}
+    const total =
+        document.getElementById("total-checkout");
 
+    if (total) {
+        total.textContent =
+            formatarPreco(
+                calcularTotal()
+            );
+    }
+
+    modal.style.display = "flex";
+
+    document.body.classList.add(
+        "modal-aberto"
+    );
+}
 
 // ==========================================
 // FECHAR CHECKOUT
 // ==========================================
 
 function fecharCheckout() {
-
     const modal =
         document.getElementById("modal-checkout");
 
     if (modal) {
-        modal.classList.remove("ativo");
-    }
-}
-
-
-// ==========================================
-// TOTAL DO CHECKOUT
-// ==========================================
-
-function atualizarTotalCheckout() {
-
-    const totalCheckout =
-        document.getElementById("total-checkout");
-
-    if (!totalCheckout) {
-        return;
+        modal.style.display = "none";
     }
 
-    const total = carrinho.reduce(
-        (soma, produto) =>
-            soma + Number(produto.preco),
-        0
+    document.body.classList.remove(
+        "modal-aberto"
     );
-
-    totalCheckout.textContent =
-        `R$ ${total.toFixed(2).replace(".", ",")}`;
 }
-
 
 // ==========================================
 // GERAR PAGAMENTO PIX
 // ==========================================
 
 async function gerarPagamentoPix() {
+    const nomeInput =
+        document.getElementById("nome");
 
-    if (carrinho.length === 0) {
+    const discordInput =
+        document.getElementById("discord");
 
-        alert("Seu carrinho está vazio.");
+    const emailInput =
+        document.getElementById("email");
+
+    const botao =
+        document.getElementById("btn-pagar-pix");
+
+    if (!nomeInput || !discordInput || !emailInput) {
+        console.error(
+            "Campos do checkout não encontrados."
+        );
+
+        alert(
+            "Erro no formulário de checkout."
+        );
 
         return;
     }
 
     const nome =
-        document.getElementById("nome")?.value.trim();
+        nomeInput.value.trim();
 
     const discord =
-        document.getElementById("discord")?.value.trim();
+        discordInput.value.trim();
 
     const email =
-        document.getElementById("email")?.value.trim();
+        emailInput.value.trim();
+
+    // ==========================================
+    // VALIDAÇÃO
+    // ==========================================
 
     if (!nome) {
+        alert(
+            "Digite seu nome."
+        );
 
-        alert("Digite seu nome.");
+        nomeInput.focus();
 
         return;
     }
 
     if (!discord) {
+        alert(
+            "Digite seu Discord."
+        );
 
-        alert("Digite seu Discord.");
+        discordInput.focus();
 
         return;
     }
 
     if (!email) {
+        alert(
+            "Digite seu e-mail."
+        );
 
-        alert("Digite seu e-mail.");
+        emailInput.focus();
 
         return;
     }
 
-    const valor = carrinho.reduce(
-        (soma, produto) =>
-            soma + Number(produto.preco),
-        0
-    );
+    if (!email.includes("@")) {
+        alert(
+            "Digite um e-mail válido."
+        );
 
-    const modalPix =
-        document.getElementById("modal-pix");
+        emailInput.focus();
 
-    const loading =
-        document.querySelector(".carregando");
+        return;
+    }
 
-    const qrCode =
-        document.getElementById("qr-code");
+    if (carrinho.length === 0) {
+        alert(
+            "Seu carrinho está vazio."
+        );
 
-    const copiaCola =
-        document.getElementById("pix-copia-cola");
+        return;
+    }
 
-    const statusPix =
-        document.getElementById("status-pix");
+    const valor =
+        calcularTotal();
 
-    const pedidoId =
-        document.getElementById("pedido-id");
+    // ==========================================
+    // VALOR MÍNIMO
+    // ==========================================
 
-    const mensagem =
-        document.getElementById("mensagem-pagamento");
+    if (valor < 1.50) {
+        alert(
+            "O valor mínimo do pagamento é R$ 1,50."
+        );
 
-    const botao =
-        document.getElementById("btn-pagar-pix");
+        return;
+    }
+
+    // ==========================================
+    // DESABILITAR BOTÃO
+    // ==========================================
 
     if (botao) {
         botao.disabled = true;
-        botao.textContent = "GERANDO PIX...";
-    }
 
-    if (modalPix) {
-        modalPix.classList.add("ativo");
-    }
-
-    if (loading) {
-        loading.style.display = "block";
-    }
-
-    if (qrCode) {
-        qrCode.style.display = "none";
-        qrCode.src = "";
-    }
-
-    if (copiaCola) {
-        copiaCola.value = "";
-    }
-
-    if (statusPix) {
-        statusPix.textContent =
-            "Gerando pagamento PIX...";
+        botao.textContent =
+            "GERANDO PIX...";
     }
 
     try {
+        // ==========================================
+        // PREPARAR PRODUTOS
+        // ==========================================
 
-        const resposta = await fetch(
-            "/api/pagamento/pix",
-            {
-                method: "POST",
+        const itensParaEnviar =
+            carrinho.map(
+                produto => ({
+                    nome:
+                        String(
+                            produto.nome
+                        ).trim(),
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    preco:
+                        Number(
+                            produto.preco
+                        ),
 
-                body: JSON.stringify({
-                    nome: nome,
-                    discord: discord,
-                    email: email,
-                    itens: carrinho,
-                    valor: valor
+                    opcao:
+                        String(
+                            produto.opcao || ""
+                        ).trim()
                 })
-            }
+            );
+
+        console.log(
+            "=========================================="
         );
 
-        const dados =
-            await resposta.json();
+        console.log(
+            "HYPE STORE - GERANDO PAGAMENTO PIX"
+        );
+
+        console.log(
+            "NOME:",
+            nome
+        );
+
+        console.log(
+            "DISCORD:",
+            discord
+        );
+
+        console.log(
+            "EMAIL:",
+            email
+        );
+
+        console.log(
+            "ITENS:",
+            itensParaEnviar
+        );
+
+        console.log(
+            "VALOR:",
+            valor
+        );
+
+        console.log(
+            "=========================================="
+        );
+
+        // ==========================================
+        // ENVIAR PARA O SERVIDOR
+        // ==========================================
+
+        const resposta =
+            await fetch(
+                "/api/pagamento/pix",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            nome:
+                                nome,
+
+                            discord:
+                                discord,
+
+                            email:
+                                email,
+
+                            itens:
+                                itensParaEnviar,
+
+                            valor:
+                                valor
+                        })
+                }
+            );
+
+        // ==========================================
+        // TENTAR LER RESPOSTA
+        // ==========================================
+
+        let dados;
+
+        try {
+            dados =
+                await resposta.json();
+        } catch (erroJson) {
+            throw new Error(
+                "O servidor retornou uma resposta inválida."
+            );
+        }
 
         console.log(
             "RESPOSTA DO SERVIDOR:",
             dados
         );
 
-        if (!resposta.ok || !dados.sucesso) {
+        // ==========================================
+        // ERRO HTTP
+        // ==========================================
+
+        if (!resposta.ok) {
+            throw new Error(
+                dados?.erro ||
+                dados?.message ||
+                "Erro ao gerar pagamento."
+            );
+        }
+
+        // ==========================================
+        // VALIDAR PAGAMENTO
+        // ==========================================
+
+        if (
+            !dados ||
+            !dados.sucesso ||
+            !dados.chargeId
+        ) {
+            console.error(
+                "Resposta inválida do servidor:",
+                dados
+            );
 
             throw new Error(
-                dados.erro ||
-                "Não foi possível gerar o PIX."
+                "Pagamento não foi criado corretamente."
             );
         }
 
-        if (pedidoId) {
-            pedidoId.textContent =
-                dados.pedidoId || "";
-        }
+        // ==========================================
+        // MOSTRAR PIX
+        // ==========================================
 
-        // QR CODE TURBOFYPAY
-        if (dados.qrCode && qrCode) {
-
-            qrCode.src =
-                dados.qrCode.startsWith("data:")
-                    ? dados.qrCode
-                    : `data:image/png;base64,${dados.qrCode}`;
-
-            qrCode.style.display = "block";
-        }
-
-        // PIX COPIA E COLA
-        if (copiaCola) {
-
-            copiaCola.value =
-                dados.copyPaste || "";
-        }
-
-        if (loading) {
-            loading.style.display = "none";
-        }
-
-        if (statusPix) {
-
-            statusPix.textContent =
-                "Aguardando pagamento...";
-        }
-
-        if (mensagem) {
-
-            mensagem.textContent =
-                "Escaneie o QR Code ou copie o PIX copia e cola.";
-        }
-
-        // COMEÇA A VERIFICAR O PAGAMENTO
-        if (dados.chargeId) {
-
-            verificarPagamento(
-                dados.chargeId
-            );
-        }
+        mostrarPagamentoPix(
+            dados
+        );
 
     } catch (erro) {
-
         console.error(
-            "ERRO AO GERAR PIX:",
+            "ERRO AO GERAR PAGAMENTO:",
             erro
         );
 
-        if (loading) {
-            loading.style.display = "none";
-        }
-
-        if (statusPix) {
-
-            statusPix.textContent =
-                "Erro ao gerar pagamento.";
-        }
-
         alert(
             erro.message ||
-            "Erro ao gerar pagamento."
+            "Não foi possível gerar o pagamento."
         );
 
     } finally {
-
         if (botao) {
-
             botao.disabled = false;
 
             botao.textContent =
@@ -435,158 +591,571 @@ async function gerarPagamentoPix() {
     }
 }
 
-
 // ==========================================
-// VERIFICAR PAGAMENTO
+// MOSTRAR PAGAMENTO PIX
 // ==========================================
 
-async function verificarPagamento(chargeId) {
+function mostrarPagamentoPix(dados) {
+    fecharCheckout();
 
-    let tentativas = 0;
-
-    const limite =
-        120;
-
-    const intervalo =
-        5000;
-
-    async function verificar() {
-
-        tentativas++;
-
-        try {
-
-            const resposta =
-                await fetch(
-                    `/api/pagamento/status/${chargeId}`
-                );
-
-            const dados =
-                await resposta.json();
-
-            console.log(
-                "STATUS DO PAGAMENTO:",
-                dados
-            );
-
-            const statusPix =
-                document.getElementById(
-                    "status-pix"
-                );
-
-            if (
-                dados.status === "PAID" ||
-                dados.status === "PAGO"
-            ) {
-
-                if (statusPix) {
-
-                    statusPix.textContent =
-                        "✅ Pagamento confirmado!";
-                }
-
-                const mensagem =
-                    document.getElementById(
-                        "mensagem-pagamento"
-                    );
-
-                if (mensagem) {
-
-                    mensagem.textContent =
-                        "Pagamento confirmado! Seu produto foi processado.";
-                }
-
-                return;
-            }
-
-            if (
-                tentativas >= limite
-            ) {
-
-                if (statusPix) {
-
-                    statusPix.textContent =
-                        "⏱️ Tempo de verificação encerrado. Consulte seu pedido.";
-                }
-
-                return;
-            }
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO AO VERIFICAR PAGAMENTO:",
-                erro
-            );
-        }
-
-        setTimeout(
-            verificar,
-            intervalo
+    const pixModal =
+        document.getElementById(
+            "modal-pix"
         );
+
+    if (!pixModal) {
+        console.error(
+            "Modal Pix não encontrado."
+        );
+
+        return;
     }
 
-    verificar();
-}
+    pixModal.style.display =
+        "flex";
 
+    document.body.classList.add(
+        "modal-aberto"
+    );
 
-// ==========================================
-// FECHAR PIX
-// ==========================================
+    // ==========================================
+    // QR CODE
+    // ==========================================
 
-function fecharPix() {
+    const qrCode =
+        document.getElementById(
+            "qr-code"
+        );
 
-    const modal =
-        document.getElementById("modal-pix");
+    if (qrCode) {
+        if (dados.qrCode) {
+            qrCode.src =
+                dados.qrCode;
 
-    if (modal) {
-        modal.classList.remove("ativo");
+            qrCode.style.display =
+                "block";
+        } else {
+            qrCode.style.display =
+                "none";
+        }
     }
-}
 
+    // ==========================================
+    // PIX COPIA E COLA
+    // ==========================================
+
+    const pixCopiaCola =
+        document.getElementById(
+            "pix-copia-cola"
+        );
+
+    if (pixCopiaCola) {
+        pixCopiaCola.value =
+            dados.copyPaste || "";
+    }
+
+    // ==========================================
+    // ID DO PEDIDO
+    // ==========================================
+
+    const pedidoId =
+        document.getElementById(
+            "pedido-id"
+        );
+
+    if (pedidoId) {
+        pedidoId.textContent =
+            dados.pedidoId || "";
+    }
+
+    // ==========================================
+    // STATUS
+    // ==========================================
+
+    const statusPix =
+        document.getElementById(
+            "status-pix"
+        );
+
+    if (statusPix) {
+        statusPix.textContent =
+            "🟡 AGUARDANDO PAGAMENTO...";
+    }
+
+    // ==========================================
+    // LIMPAR MENSAGEM
+    // ==========================================
+
+    const mensagem =
+        document.getElementById(
+            "mensagem-pagamento"
+        );
+
+    if (mensagem) {
+        mensagem.innerHTML = `
+            <span>
+                Após realizar o pagamento, aguarde a confirmação automática.
+            </span>
+        `;
+    }
+
+    // ==========================================
+    // VERIFICAR PAGAMENTO
+    // ==========================================
+
+    verificarPagamento(
+        dados.chargeId
+    );
+}
 
 // ==========================================
 // COPIAR PIX
 // ==========================================
 
 async function copiarPix() {
-
     const campo =
         document.getElementById(
             "pix-copia-cola"
         );
 
-    if (!campo || !campo.value) {
-
+    if (
+        !campo ||
+        !campo.value
+    ) {
         alert(
-            "O PIX copia e cola ainda não foi gerado."
+            "Código Pix não encontrado."
         );
 
         return;
     }
 
     try {
+        if (
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+        ) {
+            await navigator.clipboard.writeText(
+                campo.value
+            );
+        } else {
+            campo.select();
 
-        await navigator.clipboard.writeText(
-            campo.value
-        );
+            document.execCommand(
+                "copy"
+            );
+        }
 
         alert(
-            "PIX copia e cola copiado!"
+            "Código Pix copiado!"
         );
 
     } catch (erro) {
+        console.error(
+            "Erro ao copiar Pix:",
+            erro
+        );
 
         campo.select();
 
-        document.execCommand("copy");
+        document.execCommand(
+            "copy"
+        );
 
         alert(
-            "PIX copia e cola copiado!"
+            "Código Pix copiado!"
         );
     }
 }
 
+// ==========================================
+// FECHAR PIX
+// ==========================================
+
+function fecharPix() {
+    const pixModal =
+        document.getElementById(
+            "modal-pix"
+        );
+
+    if (pixModal) {
+        pixModal.style.display =
+            "none";
+    }
+
+    document.body.classList.remove(
+        "modal-aberto"
+    );
+}
+
+// ==========================================
+// VERIFICAR PAGAMENTO
+// ==========================================
+
+async function verificarPagamento(
+    chargeId
+) {
+    if (!chargeId) {
+        console.error(
+            "Charge ID não informado."
+        );
+
+        return;
+    }
+
+    // ==========================================
+    // PARAR INTERVALO ANTERIOR
+    // ==========================================
+
+    if (intervaloPagamento) {
+        clearInterval(
+            intervaloPagamento
+        );
+
+        intervaloPagamento =
+            null;
+    }
+
+    // ==========================================
+    // CONSULTAR IMEDIATAMENTE
+    // ==========================================
+
+    await consultarStatusPagamento(
+        chargeId
+    );
+
+    // ==========================================
+    // CONSULTAR A CADA 5 SEGUNDOS
+    // ==========================================
+
+    intervaloPagamento =
+        setInterval(
+            async () => {
+                await consultarStatusPagamento(
+                    chargeId
+                );
+            },
+            5000
+        );
+}
+
+// ==========================================
+// CONSULTAR STATUS DO PAGAMENTO
+// ==========================================
+
+async function consultarStatusPagamento(
+    chargeId
+) {
+    try {
+        const resposta =
+            await fetch(
+                `/api/pagamento/status/${encodeURIComponent(
+                    chargeId
+                )}`
+            );
+
+        let dados;
+
+        try {
+            dados =
+                await resposta.json();
+        } catch (erroJson) {
+            console.error(
+                "Resposta inválida do servidor."
+            );
+
+            return;
+        }
+
+        console.log(
+            "STATUS DO PAGAMENTO:",
+            dados
+        );
+
+        const statusPix =
+            document.getElementById(
+                "status-pix"
+            );
+
+        // ==========================================
+        // PAGAMENTO APROVADO
+        // ==========================================
+
+        if (
+            resposta.ok &&
+            dados.status === "PAID"
+        ) {
+            if (statusPix) {
+                statusPix.textContent =
+                    "✅ PAGAMENTO APROVADO!";
+            }
+
+            if (intervaloPagamento) {
+                clearInterval(
+                    intervaloPagamento
+                );
+
+                intervaloPagamento =
+                    null;
+            }
+
+            mostrarPagamentoAprovado(
+                dados
+            );
+
+            return;
+        }
+
+        // ==========================================
+        // PAGAMENTO PENDENTE
+        // ==========================================
+
+        if (
+            dados.status === "PENDING"
+        ) {
+            if (statusPix) {
+                statusPix.textContent =
+                    "🟡 AGUARDANDO PAGAMENTO...";
+            }
+
+            return;
+        }
+
+        // ==========================================
+        // PROCESSANDO
+        // ==========================================
+
+        if (
+            dados.status === "PROCESSANDO"
+        ) {
+            if (statusPix) {
+                statusPix.textContent =
+                    "🟡 PROCESSANDO PAGAMENTO...";
+            }
+
+            return;
+        }
+
+        // ==========================================
+        // CANCELADO / EXPIRADO
+        // ==========================================
+
+        if (
+            dados.status === "CANCELED" ||
+            dados.status === "CANCELLED" ||
+            dados.status === "EXPIRED"
+        ) {
+            if (statusPix) {
+                statusPix.textContent =
+                    "❌ PAGAMENTO EXPIRADO OU CANCELADO.";
+            }
+
+            if (intervaloPagamento) {
+                clearInterval(
+                    intervaloPagamento
+                );
+
+                intervaloPagamento =
+                    null;
+            }
+
+            return;
+        }
+
+        // ==========================================
+        // ERRO NA RESPOSTA
+        // ==========================================
+
+        if (!resposta.ok) {
+            console.error(
+                "ERRO AO CONSULTAR PAGAMENTO:",
+                dados
+            );
+
+            if (statusPix) {
+                statusPix.textContent =
+                    "⚠️ Erro ao verificar pagamento.";
+            }
+
+            return;
+        }
+
+        // ==========================================
+        // OUTROS STATUS
+        // ==========================================
+
+        if (statusPix) {
+            statusPix.textContent =
+                `STATUS: ${
+                    dados.status ||
+                    "DESCONHECIDO"
+                }`;
+        }
+
+    } catch (erro) {
+        console.error(
+            "ERRO AO CONSULTAR PAGAMENTO:",
+            erro
+        );
+    }
+}
+
+// ==========================================
+// PAGAMENTO APROVADO
+// ==========================================
+
+function mostrarPagamentoAprovado(
+    dados = {}
+) {
+    const statusPix =
+        document.getElementById(
+            "status-pix"
+        );
+
+    if (statusPix) {
+        statusPix.textContent =
+            "✅ PAGAMENTO APROVADO!";
+    }
+
+    const mensagem =
+        document.getElementById(
+            "mensagem-pagamento"
+        );
+
+    if (mensagem) {
+        let textoEntrega =
+            "";
+
+        // ==========================================
+        // PRODUTO ENTREGUE
+        // ==========================================
+
+        if (
+            dados.contaEntregue === true
+        ) {
+            textoEntrega = `
+                <div class="entrega-sucesso">
+                    <strong>
+                        Produto entregue com sucesso!
+                    </strong>
+                </div>
+            `;
+        } else {
+            textoEntrega = `
+                <div class="entrega-processando">
+                    Pagamento aprovado. Processando entrega...
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // EMAIL
+        // ==========================================
+
+        const mensagemEmail =
+            dados.emailEnviado === true
+                ? `
+                    <div class="email-sucesso">
+                        📧 O produto foi enviado para seu e-mail.
+                    </div>
+                `
+                : `
+                    <div class="email-processando">
+                        📧 O envio do e-mail está sendo processado.
+                    </div>
+                `;
+
+        mensagem.innerHTML = `
+            <div class="pagamento-aprovado">
+
+                <strong>
+                    Pagamento aprovado com sucesso!
+                </strong>
+
+                ${textoEntrega}
+
+                ${mensagemEmail}
+
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // LIMPAR CARRINHO
+    // ==========================================
+
+    carrinho = [];
+
+    atualizarContador();
+    atualizarCarrinho();
+}
+
+// ==========================================
+// FECHAR MODAIS CLICANDO FORA
+// ==========================================
+
+window.addEventListener(
+    "click",
+    event => {
+        const modais = [
+            "modal-carrinho",
+            "modal-checkout",
+            "modal-pix"
+        ];
+
+        modais.forEach(id => {
+            const modal =
+                document.getElementById(id);
+
+            if (
+                modal &&
+                event.target === modal
+            ) {
+                modal.style.display =
+                    "none";
+
+                document.body.classList.remove(
+                    "modal-aberto"
+                );
+            }
+        });
+    }
+);
+
+// ==========================================
+// TECLA ESC
+// ==========================================
+
+document.addEventListener(
+    "keydown",
+    event => {
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        const modais = [
+            "modal-carrinho",
+            "modal-checkout",
+            "modal-pix"
+        ];
+
+        modais.forEach(id => {
+            const modal =
+                document.getElementById(id);
+
+            if (
+                modal &&
+                modal.style.display === "flex"
+            ) {
+                modal.style.display =
+                    "none";
+            }
+        });
+
+        document.body.classList.remove(
+            "modal-aberto"
+        );
+    }
+);
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -594,12 +1163,150 @@ async function copiarPix() {
 
 document.addEventListener(
     "DOMContentLoaded",
-    function () {
+    () => {
+        atualizarContador();
 
         atualizarCarrinho();
 
         console.log(
-            "HYPE STORE: script.js carregado corretamente."
+            "=========================================="
+        );
+
+        console.log(
+            "HYPE STORE - SCRIPT CARREGADO"
+        );
+
+        console.log(
+            "Sistema de carrinho ativo."
+        );
+
+        console.log(
+            "Sistema de checkout ativo."
+        );
+
+        console.log(
+            "Sistema PIX ativo."
+        );
+
+        console.log(
+            "=========================================="
         );
     }
 );
+/* =========================================================
+   PREÇOS PÚBLICOS — CARREGADOS DO SERVIDOR
+========================================================= */
+
+async function carregarPrecosPublicos() {
+    try {
+        const resposta = await fetch("/api/precos", {
+            cache: "no-store"
+        });
+
+        if (!resposta.ok) {
+            throw new Error("Não foi possível carregar os preços.");
+        }
+
+        const dados = await resposta.json();
+
+        const mensal = Number(dados.mensal);
+        const anual = Number(dados.anual);
+
+        if (!Number.isFinite(mensal) || !Number.isFinite(anual)) {
+            throw new Error("Preços inválidos recebidos do servidor.");
+        }
+
+        const formatar = valor =>
+            Number(valor).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL"
+            });
+
+        /* HERO — Nitro Mensal */
+        const precoHero = document.querySelector(".hero-card-price strong");
+
+        if (precoHero) {
+            precoHero.textContent = formatar(mensal);
+        }
+
+        const botaoHero = document.querySelector(
+            ".hero-card-button"
+        );
+
+        if (botaoHero) {
+            botaoHero.onclick = function () {
+                adicionarCarrinho(
+                    "Nitro Discord Mensal",
+                    mensal,
+                    "Mensal"
+                );
+            };
+        }
+
+        /* PRODUTO — Nitro Mensal */
+        const cardMensal = document.querySelector(
+            '.product-card[data-produto="nitro discord mensal"]'
+        );
+
+        if (cardMensal) {
+            const preco = cardMensal.querySelector(".price strong");
+
+            if (preco) {
+                preco.textContent = formatar(mensal);
+            }
+
+            const botao = cardMensal.querySelector(".buy-button");
+
+            if (botao) {
+                botao.onclick = function () {
+                    adicionarCarrinho(
+                        "Nitro Discord Mensal",
+                        mensal,
+                        "Mensal"
+                    );
+                };
+            }
+        }
+
+        /* PRODUTO — Nitro Anual */
+        const cardAnual = document.querySelector(
+            '.product-card[data-produto="nitro discord anual"]'
+        );
+
+        if (cardAnual) {
+            const preco = cardAnual.querySelector(".price strong");
+
+            if (preco) {
+                preco.textContent = formatar(anual);
+            }
+
+            const botao = cardAnual.querySelector(".buy-button");
+
+            if (botao) {
+                botao.onclick = function () {
+                    adicionarCarrinho(
+                        "Nitro Discord Anual",
+                        anual,
+                        "Anual"
+                    );
+                };
+            }
+        }
+
+        console.log(
+            "[HYPE STORE] Preços carregados:",
+            {
+                mensal,
+                anual
+            }
+        );
+
+    } catch (erro) {
+        console.error(
+            "[HYPE STORE] Erro ao carregar preços:",
+            erro
+        );
+    }
+}
+
+window.addEventListener("DOMContentLoaded", carregarPrecosPublicos);

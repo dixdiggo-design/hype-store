@@ -1,16 +1,4 @@
 {
-  "Nitro Discord Mensal": [
-    {
-      "email": "conta1@exemplo.com",
-      "senha": "SENHA1",
-      "status": "disponivel"
-    }
-  ],
-  "Nitro Discord Anual": [
-    {
-      "email": "conta2@exemplo.com",
-      "senha": "SENHA2",
-      "status": "disponivel"
-    }
-  ]
+  "Nitro Discord Mensal": [],
+  "Nitro Discord Anual": []
 }

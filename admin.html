@@ -1,0 +1,2606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPE STORE — Administração</title>
+    <meta name="theme-color" content="#08080b">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #08080b;
+            --bg-soft: #0d0d12;
+            --card: #111117;
+            --card-hover: #16161e;
+            --border: rgba(255,255,255,.08);
+            --border-light: rgba(255,255,255,.12);
+            --purple: #8b5cf6;
+            --purple-light: #a78bfa;
+            --purple-dark: #6d28d9;
+            --green: #22c55e;
+            --green-soft: rgba(34,197,94,.10);
+            --yellow: #f59e0b;
+            --yellow-soft: rgba(245,158,11,.10);
+            --red: #ef4444;
+            --red-soft: rgba(239,68,68,.10);
+            --text: #fff;
+            --text-soft: #a1a1aa;
+            --text-muted: #71717a;
+            --radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Inter", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(
+                    circle at 50% -15%,
+                    rgba(139,92,246,.12),
+                    transparent 35%
+                ),
+                var(--bg);
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+            font-family: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* LOGIN */
+
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-brand {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .login-brand h1 {
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: -.8px;
+        }
+
+        .login-brand h1 span,
+        .logo span {
+            color: var(--purple-light);
+        }
+
+        .login-brand p {
+            margin-top: 7px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .login-card {
+            position: relative;
+            padding: 32px;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,.035),
+                    rgba(255,255,255,.01)
+                ),
+                var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            box-shadow: 0 25px 70px rgba(0,0,0,.45);
+        }
+
+        .login-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 150px;
+            height: 2px;
+            transform: translateX(-50%);
+            background: linear-gradient(
+                90deg,
+                transparent,
+                var(--purple),
+                transparent
+            );
+            box-shadow: 0 0 20px rgba(139,92,246,.7);
+        }
+
+        .login-icon {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: rgba(139,92,246,.10);
+            border: 1px solid rgba(139,92,246,.22);
+            color: var(--purple-light);
+            font-size: 24px;
+        }
+
+        .login-card h2 {
+            text-align: center;
+            font-size: 21px;
+            margin-bottom: 7px;
+        }
+
+        .login-card .description {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-soft);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .input {
+            width: 100%;
+            height: 48px;
+            padding: 0 14px;
+            color: #fff;
+            background: rgba(255,255,255,.035);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .input:focus {
+            border-color: rgba(139,92,246,.65);
+            box-shadow: 0 0 0 3px rgba(139,92,246,.10);
+        }
+
+        .login-button {
+            width: 100%;
+            height: 48px;
+            margin-top: 5px;
+            border: 0;
+            border-radius: 11px;
+            background: linear-gradient(
+                135deg,
+                var(--purple),
+                var(--purple-dark)
+            );
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            transition: transform .2s, filter .2s;
+        }
+
+        .login-button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+        }
+
+        .login-message {
+            min-height: 18px;
+            margin-top: 13px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--red);
+        }
+
+        /* APP */
+
+        .app {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: rgba(8,8,11,.88);
+            backdrop-filter: blur(18px);
+        }
+
+        .header-inner {
+            width: min(1400px, calc(100% - 40px));
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -.7px;
+        }
+
+        .admin-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-left: 10px;
+            padding: 6px 9px;
+            border-radius: 7px;
+            background: rgba(139,92,246,.08);
+            border: 1px solid rgba(139,92,246,.15);
+            color: var(--purple-light);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-button {
+            height: 38px;
+            padding: 0 13px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.025);
+            color: var(--text-soft);
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background .2s, border-color .2s, color .2s;
+        }
+
+        .header-button:hover {
+            background: rgba(255,255,255,.06);
+            border-color: var(--border-light);
+            color: #fff;
+        }
+
+        .logout-button:hover {
+            color: #f87171;
+            border-color: rgba(239,68,68,.25);
+            background: var(--red-soft);
+        }
+
+        .main {
+            width: min(1400px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 35px 0 50px;
+        }
+
+        .page-heading {
+            margin-bottom: 25px;
+        }
+
+        .page-heading .eyebrow {
+            color: var(--purple-light);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+
+        .page-heading h1 {
+            font-size: 28px;
+            letter-spacing: -1px;
+        }
+
+        .page-heading p {
+            margin-top: 7px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 370px minmax(0,1fr);
+            gap: 18px;
+            min-height: 620px;
+        }
+
+        .panel {
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,.025),
+                    rgba(255,255,255,.008)
+                ),
+                var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            min-height: 68px;
+            padding: 15px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .panel-subtitle {
+            margin-top: 3px;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        /* TICKETS */
+
+        .ticket-controls {
+            padding: 14px 18px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .control-button {
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.025);
+            color: var(--text-soft);
+            font-size: 11px;
+            font-weight: 700;
+            transition: .2s;
+        }
+
+        .control-button:hover {
+            color: #fff;
+            background: rgba(255,255,255,.06);
+            border-color: var(--border-light);
+        }
+
+        .control-button.primary {
+            background: rgba(139,92,246,.10);
+            border-color: rgba(139,92,246,.22);
+            color: var(--purple-light);
+        }
+
+        .control-button.primary:hover {
+            background: rgba(139,92,246,.16);
+        }
+
+        .tickets-list {
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .tickets-list::-webkit-scrollbar,
+        .messages::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .tickets-list::-webkit-scrollbar-thumb,
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,.10);
+            border-radius: 99px;
+        }
+
+        .ticket-item {
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(255,255,255,.045);
+            cursor: pointer;
+            transition: background .2s, border-color .2s;
+        }
+
+        .ticket-item:hover {
+            background: rgba(255,255,255,.025);
+        }
+
+        .ticket-item.active {
+            background: rgba(139,92,246,.07);
+            border-left: 2px solid var(--purple);
+        }
+
+        .ticket-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .ticket-title {
+            min-width: 0;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-date {
+            flex-shrink: 0;
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+
+        .ticket-preview {
+            margin-top: 7px;
+            color: var(--text-muted);
+            font-size: 10px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .ticket-bottom {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ticket-id {
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 7px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .status-aberto {
+            color: #fbbf24;
+            background: var(--yellow-soft);
+        }
+
+        .status-atendimento {
+            color: var(--purple-light);
+            background: rgba(139,92,246,.10);
+        }
+
+        .status-resolvido {
+            color: #4ade80;
+            background: var(--green-soft);
+        }
+
+        .empty-tickets {
+            padding: 55px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(255,255,255,.035);
+            color: var(--text-muted);
+            font-size: 20px;
+        }
+
+        .empty-tickets h3 {
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .empty-tickets p {
+            color: var(--text-muted);
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        /* CONVERSA */
+
+        .conversation-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 620px;
+        }
+
+        .conversation-header {
+            padding: 17px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .conversation-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .conversation-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .conversation-info {
+            margin-top: 5px;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .conversation-actions {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .status-select {
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,.035);
+            border: 1px solid var(--border);
+            color: var(--text-soft);
+            font-size: 10px;
+            outline: none;
+        }
+
+        .status-select option {
+            background: #111117;
+            color: #fff;
+        }
+
+        .messages {
+            flex: 1;
+            min-height: 420px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 22px 20px;
+        }
+
+        .message {
+            max-width: 78%;
+            margin-bottom: 14px;
+        }
+
+        .message.admin {
+            margin-left: auto;
+        }
+
+        .message-author {
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .message.admin .message-author {
+            text-align: right;
+            color: var(--purple-light);
+        }
+
+        .message-bubble {
+            padding: 11px 13px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.055);
+            color: #ddd;
+            font-size: 11px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.admin .message-bubble {
+            background: rgba(139,92,246,.10);
+            border-color: rgba(139,92,246,.15);
+            color: #eee;
+        }
+
+        .message-time {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 8px;
+        }
+
+        .message.admin .message-time {
+            text-align: right;
+        }
+
+        .empty-conversation {
+            flex: 1;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .empty-conversation .empty-icon {
+            width: 62px;
+            height: 62px;
+            font-size: 25px;
+        }
+
+        .empty-conversation h3 {
+            font-size: 15px;
+            margin-bottom: 7px;
+        }
+
+        .empty-conversation p {
+            max-width: 330px;
+            color: var(--text-muted);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        /* RESPOSTA */
+
+        .reply-area {
+            padding: 15px 18px;
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,.12);
+        }
+
+        .reply-form {
+            display: flex;
+            align-items: flex-end;
+            gap: 9px;
+        }
+
+        .reply-textarea {
+            flex: 1;
+            min-height: 46px;
+            max-height: 120px;
+            padding: 12px 13px;
+            resize: vertical;
+            border-radius: 10px;
+            background: rgba(255,255,255,.035);
+            border: 1px solid var(--border);
+            color: #fff;
+            outline: none;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .reply-textarea:focus {
+            border-color: rgba(139,92,246,.55);
+            box-shadow: 0 0 0 3px rgba(139,92,246,.08);
+        }
+
+        .reply-button {
+            flex-shrink: 0;
+            height: 46px;
+            padding: 0 17px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(
+                135deg,
+                var(--purple),
+                var(--purple-dark)
+            );
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .reply-button:hover {
+            filter: brightness(1.08);
+        }
+
+        .reply-message {
+            min-height: 15px;
+            margin-top: 7px;
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+
+        @media (max-width: 950px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .tickets-list {
+                max-height: 350px;
+            }
+
+            .conversation-panel {
+                min-height: 600px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header-inner,
+            .main {
+                width: min(100% - 24px, 1400px);
+            }
+
+            .header {
+                height: 64px;
+            }
+
+            .logo {
+                font-size: 17px;
+            }
+
+            .admin-label {
+                display: none;
+            }
+
+            .header-button {
+                height: 35px;
+                padding: 0 9px;
+                font-size: 10px;
+            }
+
+            .main {
+                padding-top: 25px;
+            }
+
+            .page-heading h1 {
+                font-size: 24px;
+            }
+
+            .dashboard {
+                gap: 12px;
+            }
+
+            .panel-header {
+                padding: 14px;
+            }
+
+            .ticket-controls {
+                padding: 12px 14px;
+            }
+
+            .ticket-item {
+                padding: 14px;
+            }
+
+            .conversation-header {
+                padding: 14px;
+            }
+
+            .conversation-title-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .conversation-actions {
+                width: 100%;
+            }
+
+            .status-select {
+                flex: 1;
+            }
+
+            .messages {
+                padding: 18px 14px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .reply-area {
+                padding: 12px;
+            }
+
+            .reply-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .reply-button {
+                width: 100%;
+            }
+
+            .login-card {
+                padding: 27px 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<section id="login-section" class="login-page">
+    <div class="login-container">
+
+        <div class="login-brand">
+            <h1>HYPE <span>STORE</span></h1>
+            <p>Painel administrativo</p>
+        </div>
+
+        <div class="login-card">
+
+            <div class="login-icon">🔐</div>
+
+            <h2>Área administrativa</h2>
+
+            <p class="description">
+                Entre com sua senha de administrador
+                para acessar os tickets dos clientes.
+            </p>
+
+            <form id="login-form">
+
+                <div class="field">
+                    <label for="admin-password">Senha</label>
+
+                    <input
+                        id="admin-password"
+                        class="input"
+                        type="password"
+                        placeholder="Digite sua senha"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    class="login-button"
+                >
+                    Entrar no painel
+                </button>
+
+            </form>
+
+            <div id="login-message" class="login-message"></div>
+
+        </div>
+    </div>
+</section>
+
+
+<section id="admin-section" class="app">
+
+    <header class="header">
+
+        <div class="header-inner">
+
+            <div>
+                <span class="logo">
+                    HYPE <span>STORE</span>
+                </span>
+
+                <span class="admin-label">
+                    ADMIN
+                </span>
+            </div>
+
+            <div class="header-actions">
+
+                <a
+                    href="/"
+                    class="header-button"
+                >
+                    ← Loja
+                </a>
+
+                <button
+                    id="logout-button"
+                    class="header-button logout-button"
+                    type="button"
+                >
+                    Sair
+                </button>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <main class="main">
+
+        <div class="page-heading">
+
+            <div class="eyebrow">
+                HYPE STORE
+            </div>
+
+            <h1>
+                Painel administrativo
+            </h1>
+
+            <p>
+                Gerencie os atendimentos e converse com seus clientes.
+            </p>
+
+        </div>
+
+
+        <div class="dashboard">
+
+            <section class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="panel-title">
+                            Tickets
+                        </div>
+
+                        <div class="panel-subtitle">
+                            Atendimentos dos clientes
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="ticket-controls">
+
+                    <button
+                        id="btn-consultar-tickets"
+                        class="control-button primary"
+                        type="button"
+                        onclick="consultarTickets()"
+                    >
+                        Consultar tickets
+                    </button>
+
+                    <button
+                        id="btn-limpar-tickets"
+                        class="control-button"
+                        type="button"
+                        onclick="limparConsultaTickets()"
+                    >
+                        Limpar
+                    </button>
+
+                    <button
+                        class="control-button"
+                        type="button"
+                        onclick="carregarTickets()"
+                        title="Atualizar"
+                    >
+                        ↻
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="tickets-list"
+                    class="tickets-list"
+                >
+
+                    <div class="empty-tickets">
+
+                        <div class="empty-icon">
+                            🎫
+                        </div>
+
+                        <h3>
+                            Tickets não carregados
+                        </h3>
+
+                        <p>
+                            Clique em "Consultar tickets"
+                            para carregar os atendimentos.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <section class="panel conversation-panel">
+
+                <div
+                    id="conversation-empty"
+                    class="empty-conversation"
+                >
+
+                    <div class="empty-icon">
+                        💬
+                    </div>
+
+                    <h3>
+                        Nenhuma conversa selecionada
+                    </h3>
+
+                    <p>
+                        Selecione um ticket na lista ao lado
+                        para visualizar a conversa com o cliente.
+                    </p>
+
+                </div>
+
+
+                <div
+                    id="conversation-content"
+                    class="hidden"
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        height:100%;
+                        min-height:620px;
+                    "
+                >
+
+                    <div class="conversation-header">
+
+                        <div class="conversation-title-row">
+
+                            <div>
+
+                                <div
+                                    id="ticket-title"
+                                    class="conversation-title"
+                                >
+                                    Ticket
+                                </div>
+
+                                <div
+                                    id="ticket-info"
+                                    class="conversation-info"
+                                >
+                                    —
+                                </div>
+
+                            </div>
+
+
+                            <div class="conversation-actions">
+
+                                <select
+                                    id="ticket-status"
+                                    class="status-select"
+                                    onchange="alterarStatus()"
+                                >
+                                    <option value="aberto">
+                                        Aberto
+                                    </option>
+
+                                    <option value="em_atendimento">
+                                        Em atendimento
+                                    </option>
+
+                                    <option value="resolvido">
+                                        Resolvido
+                                    </option>
+                                </select>
+
+
+                                <button
+                                    type="button"
+                                    id="btn-fechar-ticket"
+                                    class="control-button"
+                                    onclick="fecharTicket()"
+                                >
+                                    🔒 Fechar Ticket
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="messages"
+                        class="messages"
+                    ></div>
+
+
+                    <div class="reply-area">
+
+                        <form
+                            id="reply-form"
+                            class="reply-form"
+                        >
+
+                            <textarea
+                                id="reply-text"
+                                class="reply-textarea"
+                                placeholder="Digite sua resposta..."
+                                maxlength="2000"
+                            ></textarea>
+
+                            <button
+                                type="submit"
+                                class="reply-button"
+                            >
+                                Enviar
+                            </button>
+
+                        </form>
+
+                        <div
+                            id="reply-message"
+                            class="reply-message"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    
+<section id="painel-estoque-precos" style="margin-top:30px;">
+    <div style="background:#111;border:1px solid #292929;border-radius:16px;padding:24px;">
+        <h2 style="margin:0 0 20px;">ESTOQUE</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:25px;">
+            <div style="background:#181818;border-radius:12px;padding:18px;">
+                <strong>Nitro Mensal</strong>
+                <div id="estoque-mensal" style="font-size:24px;margin-top:8px;">0 disponíveis</div>
+            </div>
+
+            <div style="background:#181818;border-radius:12px;padding:18px;">
+                <strong>Nitro Anual</strong>
+                <div id="estoque-anual" style="font-size:24px;margin-top:8px;">0 disponíveis</div>
+            </div>
+        </div>
+
+        <h2>ADICIONAR CONTA</h2>
+
+        <div style="display:grid;gap:10px;max-width:500px;">
+            <select id="estoque-produto" style="padding:12px;border-radius:8px;">
+                <option value="mensal">Nitro Mensal</option>
+                <option value="anual">Nitro Anual</option>
+            </select>
+
+            <input id="estoque-email" type="email" placeholder="Email" style="padding:12px;border-radius:8px;">
+            <input id="estoque-senha" type="text" placeholder="Senha" style="padding:12px;border-radius:8px;">
+
+            <button type="button" onclick="adicionarContaEstoque()" style="padding:12px;border:0;border-radius:8px;cursor:pointer;">
+                + ADICIONAR
+            </button>
+        </div>
+
+        <h2 style="margin-top:30px;">PREÇOS</h2>
+
+        <div style="display:grid;gap:10px;max-width:500px;">
+            <label>
+                Mensal:
+                <input id="preco-mensal" type="number" min="0.01" step="0.01" style="padding:12px;width:100%;box-sizing:border-box;">
+            </label>
+
+            <label>
+                Anual:
+                <input id="preco-anual" type="number" min="0.01" step="0.01" style="padding:12px;width:100%;box-sizing:border-box;">
+            </label>
+
+            <button type="button" onclick="salvarPrecosAdmin()" style="padding:12px;border:0;border-radius:8px;cursor:pointer;">
+                SALVAR PREÇOS
+            </button>
+        </div>
+
+        <div id="lista-estoque-admin" style="margin-top:30px;"></div>
+    </div>
+</section>
+</main>
+
+</section>
+
+
+<script>
+    let ticketSelecionado = null;
+    let intervalo = null;
+    let consultaTicketsAberta = false;
+
+    const loginSection =
+        document.getElementById("login-section");
+
+    const adminSection =
+        document.getElementById("admin-section");
+
+    const loginForm =
+        document.getElementById("login-form");
+
+    const loginMessage =
+        document.getElementById("login-message");
+
+    const ticketsList =
+        document.getElementById("tickets-list");
+
+    const conversationEmpty =
+        document.getElementById("conversation-empty");
+
+    const conversationContent =
+        document.getElementById("conversation-content");
+
+    const ticketTitle =
+        document.getElementById("ticket-title");
+
+    const ticketInfo =
+        document.getElementById("ticket-info");
+
+    const messages =
+        document.getElementById("messages");
+
+    const replyText =
+        document.getElementById("reply-text");
+
+    const replyMessage =
+        document.getElementById("reply-message");
+
+    const ticketStatus =
+        document.getElementById("ticket-status");
+
+
+    function escaparHTML(valor) {
+        const div = document.createElement("div");
+        div.textContent =
+            valor == null ? "" : String(valor);
+        return div.innerHTML;
+    }
+
+
+    function formatarData(valor) {
+
+        if (!valor) {
+            return "—";
+        }
+
+        const data = new Date(valor);
+
+        if (Number.isNaN(data.getTime())) {
+            return String(valor);
+        }
+
+        return data.toLocaleString(
+            "pt-BR",
+            {
+                dateStyle: "short",
+                timeStyle: "short"
+            }
+        );
+    }
+
+
+    function obterStatusClasse(status) {
+
+        const valor =
+            String(status || "aberto")
+                .toLowerCase();
+
+        if (
+            valor === "resolvido" ||
+            valor === "fechado"
+        ) {
+            return "status-resolvido";
+        }
+
+        if (
+            valor === "em_atendimento" ||
+            valor === "atendimento"
+        ) {
+            return "status-atendimento";
+        }
+
+        return "status-aberto";
+    }
+
+
+    function formatarStatus(status) {
+
+        const valor =
+            String(status || "aberto")
+                .toLowerCase();
+
+        if (valor === "resolvido") {
+            return "Resolvido";
+        }
+
+        if (
+            valor === "em_atendimento" ||
+            valor === "atendimento"
+        ) {
+            return "Em atendimento";
+        }
+
+        if (valor === "fechado") {
+            return "Fechado";
+        }
+
+        return "Aberto";
+    }
+
+
+    async function verificarLogin() {
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/me",
+                    {
+                        credentials: "same-origin"
+                    }
+                );
+
+            if (!resposta.ok) {
+                mostrarLogin();
+                return;
+            }
+
+            const dados =
+                await resposta.json();
+
+            if (
+                dados &&
+                dados.autenticado
+            ) {
+                mostrarPainel();
+            } else {
+                mostrarLogin();
+            }
+
+        } catch (erro) {
+
+            mostrarLogin();
+
+        }
+    }
+
+
+    function mostrarLogin() {
+
+        loginSection.style.display = "flex";
+        adminSection.style.display = "none";
+
+        pararAtualizacao();
+
+        ticketSelecionado = null;
+    }
+
+
+    function mostrarPainel() {
+
+        loginSection.style.display = "none";
+        adminSection.style.display = "block";
+    }
+
+
+    loginForm.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            loginMessage.textContent =
+                "Entrando...";
+
+            loginMessage.style.color =
+                "var(--text-muted)";
+
+            const senha =
+                document.getElementById(
+                    "admin-password"
+                ).value;
+
+            try {
+
+                const resposta =
+                    await fetch(
+                        "/api/admin/login",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            credentials:
+                                "same-origin",
+
+                            body: JSON.stringify({
+                                senha
+                            })
+                        }
+                    );
+
+                const dados =
+                    await resposta.json()
+                        .catch(() => ({}));
+
+                if (!resposta.ok) {
+
+                    throw new Error(
+                        dados.mensagem ||
+                        "Senha incorreta."
+                    );
+                }
+
+                loginMessage.textContent = "";
+
+                loginForm.reset();
+
+                mostrarPainel();
+
+            } catch (erro) {
+
+                loginMessage.textContent =
+                    erro.message ||
+                    "Não foi possível entrar.";
+
+                loginMessage.style.color =
+                    "var(--red)";
+            }
+        }
+    );
+
+
+    document
+        .getElementById("logout-button")
+        .addEventListener(
+            "click",
+            async function() {
+
+                try {
+
+                    await fetch(
+                        "/api/admin/logout",
+                        {
+                            method: "POST",
+                            credentials:
+                                "same-origin"
+                        }
+                    );
+
+                } catch (erro) {
+                    // continua
+                }
+
+                mostrarLogin();
+            }
+        );
+
+
+    async function consultarTickets() {
+
+        consultaTicketsAberta = true;
+
+        await carregarTickets();
+
+        iniciarAtualizacao();
+    }
+
+
+    function limparConsultaTickets() {
+
+        consultaTicketsAberta = false;
+
+        pararAtualizacao();
+
+        ticketsList.innerHTML = `
+            <div class="empty-tickets">
+
+                <div class="empty-icon">
+                    🎫
+                </div>
+
+                <h3>
+                    Tickets não carregados
+                </h3>
+
+                <p>
+                    Clique em "Consultar tickets"
+                    para carregar os atendimentos.
+                </p>
+
+            </div>
+        `;
+
+        ticketSelecionado = null;
+
+        conversationEmpty.classList.remove(
+            "hidden"
+        );
+
+        conversationContent.classList.add(
+            "hidden"
+        );
+    }
+
+
+    function iniciarAtualizacao() {
+
+        pararAtualizacao();
+
+        intervalo =
+            setInterval(
+                async function() {
+
+                    if (!consultaTicketsAberta) {
+                        return;
+                    }
+
+                    await carregarTickets(true);
+
+                    if (ticketSelecionado) {
+
+                        const id =
+                            ticketSelecionado.id;
+
+                        try {
+
+                            await abrirTicketAdmin(
+                                id,
+                                true
+                            );
+
+                        } catch (erro) {
+
+                            ticketSelecionado = null;
+
+                            conversationContent.classList.add(
+                                "hidden"
+                            );
+
+                            conversationEmpty.classList.remove(
+                                "hidden"
+                            );
+                        }
+                    }
+
+                },
+                5000
+            );
+    }
+
+
+    function pararAtualizacao() {
+
+        if (intervalo) {
+
+            clearInterval(intervalo);
+
+            intervalo = null;
+        }
+    }
+
+
+    async function carregarTickets(
+        atualizacao = false
+    ) {
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets",
+                    {
+                        credentials:
+                            "same-origin"
+                    }
+                );
+
+            if (resposta.status === 401) {
+
+                mostrarLogin();
+
+                return;
+            }
+
+            const dados =
+                await resposta.json();
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    "Erro ao carregar tickets."
+                );
+            }
+
+            const tickets =
+                Array.isArray(dados)
+                    ? dados
+                    : (
+                        dados.tickets ||
+                        []
+                    );
+
+            renderizarTickets(tickets);
+
+        } catch (erro) {
+
+            if (!atualizacao) {
+
+                ticketsList.innerHTML = `
+                    <div class="empty-tickets">
+
+                        <div class="empty-icon">
+                            ⚠
+                        </div>
+
+                        <h3>
+                            Erro ao carregar
+                        </h3>
+
+                        <p>
+                            ${escaparHTML(
+                                erro.message ||
+                                "Não foi possível carregar os tickets."
+                            )}
+                        </p>
+
+                    </div>
+                `;
+            }
+        }
+    }
+
+
+    function renderizarTickets(tickets) {
+
+        tickets =
+            tickets.filter(
+                function(ticket) {
+
+                    return String(
+                        ticket.status || ""
+                    )
+                        .trim()
+                        .toLowerCase() !== "fechado";
+                }
+            );
+
+        if (!tickets.length) {
+
+            ticketsList.innerHTML = `
+                <div class="empty-tickets">
+
+                    <div class="empty-icon">
+                        ✓
+                    </div>
+
+                    <h3>
+                        Nenhum ticket
+                    </h3>
+
+                    <p>
+                        Não existem atendimentos
+                        registrados no momento.
+                    </p>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
+        ticketsList.innerHTML =
+            tickets.map(
+                function(ticket) {
+
+                    const id =
+                        ticket.id ||
+                        ticket.ticketId ||
+                        "";
+
+                    const titulo =
+                        ticket.assunto ||
+                        ticket.titulo ||
+                        ticket.nome ||
+                        "Atendimento";
+
+                    const mensagensTicket =
+                        Array.isArray(
+                            ticket.mensagens
+                        )
+                            ? ticket.mensagens
+                            : [];
+
+                    const ultimaMensagem =
+                        mensagensTicket.length
+                            ? mensagensTicket[
+                                mensagensTicket.length - 1
+                            ]
+                            : null;
+
+                    const preview =
+                        ultimaMensagem
+                            ? (
+                                ultimaMensagem.texto ||
+                                ultimaMensagem.mensagem ||
+                                ""
+                            )
+                            : (
+                                ticket.mensagem ||
+                                "Sem mensagens"
+                            );
+
+                    const data =
+                        ticket.atualizadoEm ||
+                        ticket.updatedAt ||
+                        ticket.criadoEm ||
+                        ticket.createdAt;
+
+                    const status =
+                        ticket.status ||
+                        "aberto";
+
+                    const ativo =
+                        ticketSelecionado &&
+                        ticketSelecionado.id === id
+                            ? "active"
+                            : "";
+
+                    return `
+                        <div
+                            class="ticket-item ${ativo}"
+                            data-ticket-id="${escaparHTML(id)}"
+                            onclick="abrirTicketAdmin('${escaparHTML(id)}')"
+                        >
+
+                            <div class="ticket-top">
+
+                                <div class="ticket-title">
+                                    ${escaparHTML(titulo)}
+                                </div>
+
+                                <div class="ticket-date">
+                                    ${escaparHTML(
+                                        data
+                                            ? formatarData(data)
+                                            : ""
+                                    )}
+                                </div>
+
+                            </div>
+
+                            <div class="ticket-preview">
+                                ${escaparHTML(preview)}
+                            </div>
+
+                            <div class="ticket-bottom">
+
+                                <span class="ticket-id">
+                                    #${escaparHTML(id)}
+                                </span>
+
+                                <span
+                                    class="status-badge ${obterStatusClasse(status)}"
+                                >
+                                    ${escaparHTML(
+                                        formatarStatus(status)
+                                    )}
+                                </span>
+
+                            </div>
+
+                        </div>
+                    `;
+                }
+            ).join("");
+    }
+
+
+    async function abrirTicketAdmin(
+        id,
+        atualizacao = false
+    ) {
+
+        if (!id) {
+            return;
+        }
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id),
+                    {
+                        credentials:
+                            "same-origin"
+                    }
+                );
+
+            if (resposta.status === 401) {
+
+                mostrarLogin();
+
+                return;
+            }
+
+            const dados =
+                await resposta.json();
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    "Não foi possível abrir o ticket."
+                );
+            }
+
+            const ticket =
+                dados.ticket ||
+                dados;
+
+            /*
+             * Se o ticket foi fechado enquanto
+             * o painel estava aberto, ele não
+             * permanece na conversa.
+             */
+            if (
+                String(ticket.status || "")
+                    .trim()
+                    .toLowerCase() === "fechado"
+            ) {
+
+                ticketSelecionado = null;
+
+                conversationContent.classList.add(
+                    "hidden"
+                );
+
+                conversationEmpty.classList.remove(
+                    "hidden"
+                );
+
+                await carregarTickets(
+                    true
+                );
+
+                return;
+            }
+
+            ticketSelecionado = ticket;
+
+            conversationEmpty.classList.add(
+                "hidden"
+            );
+
+            conversationContent.classList.remove(
+                "hidden"
+            );
+
+            ticketTitle.textContent =
+                ticket.assunto ||
+                ticket.titulo ||
+                ticket.nome ||
+                "Atendimento";
+
+            const cliente =
+                ticket.nome ||
+                ticket.cliente ||
+                ticket.email ||
+                "Cliente";
+
+            const idTicket =
+                ticket.id ||
+                id;
+
+            ticketInfo.textContent =
+                cliente +
+                " • #" +
+                idTicket;
+
+            const status =
+                String(
+                    ticket.status ||
+                    "aberto"
+                ).toLowerCase();
+
+            if (
+                status === "aberto" ||
+                status === "em_atendimento" ||
+                status === "resolvido"
+            ) {
+                ticketStatus.value = status;
+            } else {
+                ticketStatus.value = "aberto";
+            }
+
+            renderizarMensagens(
+                ticket.mensagens ||
+                []
+            );
+
+            if (!atualizacao) {
+
+                replyText.focus();
+
+                await carregarTickets(
+                    true
+                );
+            }
+
+        } catch (erro) {
+
+            if (!atualizacao) {
+
+                replyMessage.textContent =
+                    erro.message ||
+                    "Erro ao abrir ticket.";
+            }
+
+            throw erro;
+        }
+    }
+
+
+    function renderizarMensagens(lista) {
+
+        if (
+            !Array.isArray(lista) ||
+            !lista.length
+        ) {
+
+            messages.innerHTML = `
+                <div class="empty-tickets">
+
+                    <div class="empty-icon">
+                        💬
+                    </div>
+
+                    <h3>
+                        Nenhuma mensagem
+                    </h3>
+
+                    <p>
+                        Ainda não existem mensagens
+                        nesta conversa.
+                    </p>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
+        messages.innerHTML =
+            lista.map(
+                function(mensagem) {
+
+                    const remetente =
+                        String(
+                            mensagem.remetente ||
+                            mensagem.autor ||
+                            mensagem.tipo ||
+                            "cliente"
+                        ).toLowerCase();
+
+                    const isAdmin =
+                        remetente === "admin" ||
+                        remetente === "administrador" ||
+                        remetente === "atendente";
+
+                    const texto =
+                        mensagem.texto ||
+                        mensagem.mensagem ||
+                        mensagem.conteudo ||
+                        "";
+
+                    const data =
+                        mensagem.criadoEm ||
+                        mensagem.createdAt ||
+                        mensagem.data;
+
+                    return `
+                        <div
+                            class="message ${
+                                isAdmin
+                                    ? "admin"
+                                    : ""
+                            }"
+                        >
+
+                            <div class="message-author">
+                                ${
+                                    isAdmin
+                                        ? "Você"
+                                        : "Cliente"
+                                }
+                            </div>
+
+                            <div class="message-bubble">
+                                ${escaparHTML(texto)}
+                            </div>
+
+                            <div class="message-time">
+                                ${escaparHTML(
+                                    data
+                                        ? formatarData(data)
+                                        : ""
+                                )}
+                            </div>
+
+                        </div>
+                    `;
+                }
+            ).join("");
+
+        messages.scrollTop =
+            messages.scrollHeight;
+    }
+
+
+    document
+        .getElementById("reply-form")
+        .addEventListener(
+            "submit",
+            async function(event) {
+
+                event.preventDefault();
+
+                await responderTicket();
+            }
+        );
+
+
+    async function responderTicket() {
+
+        if (!ticketSelecionado) {
+
+            replyMessage.textContent =
+                "Selecione um ticket primeiro.";
+
+            return;
+        }
+
+        if (
+            String(
+                ticketSelecionado.status || ""
+            )
+                .toLowerCase() === "fechado"
+        ) {
+
+            replyMessage.textContent =
+                "Este ticket está fechado.";
+
+            return;
+        }
+
+        const texto =
+            replyText.value.trim();
+
+        if (!texto) {
+
+            replyMessage.textContent =
+                "Digite uma mensagem.";
+
+            return;
+        }
+
+        replyMessage.textContent =
+            "Enviando...";
+
+        try {
+
+            const id =
+                ticketSelecionado.id;
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/mensagens",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        credentials:
+                            "same-origin",
+
+                        body: JSON.stringify({
+                            mensagem: texto,
+                            texto: texto
+                        })
+                    }
+                );
+
+            const dados =
+                await resposta.json()
+                    .catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    "Não foi possível enviar a resposta."
+                );
+            }
+
+            replyText.value = "";
+
+            replyMessage.textContent =
+                "Mensagem enviada.";
+
+            await abrirTicketAdmin(id);
+
+            setTimeout(
+                function() {
+
+                    replyMessage.textContent =
+                        "";
+
+                },
+                2500
+            );
+
+        } catch (erro) {
+
+            replyMessage.textContent =
+                erro.message ||
+                "Erro ao enviar mensagem.";
+        }
+    }
+
+
+    async function alterarStatus() {
+
+        if (!ticketSelecionado) {
+            return;
+        }
+
+        const novoStatus =
+            ticketStatus.value;
+
+        try {
+
+            const id =
+                ticketSelecionado.id;
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/status",
+                    {
+                        method: "PATCH",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        credentials:
+                            "same-origin",
+
+                        body: JSON.stringify({
+                            status: novoStatus
+                        })
+                    }
+                );
+
+            const dados =
+                await resposta.json()
+                    .catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    "Não foi possível alterar o status."
+                );
+            }
+
+            ticketSelecionado.status =
+                novoStatus;
+
+            await carregarTickets(true);
+
+        } catch (erro) {
+
+            alert(
+                erro.message ||
+                "Erro ao alterar status."
+            );
+        }
+    }
+
+
+    async function fecharTicket() {
+
+        if (!ticketSelecionado) {
+
+            alert(
+                "Selecione um ticket primeiro."
+            );
+
+            return;
+        }
+
+        const id =
+            ticketSelecionado.id;
+
+        if (
+            !confirm(
+                "Deseja realmente fechar este ticket?"
+            )
+        ) {
+            return;
+        }
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/fechar",
+                    {
+                        method: "PATCH",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        credentials:
+                            "same-origin",
+
+                        body: JSON.stringify({})
+                    }
+                );
+
+            const dados =
+                await resposta.json()
+                    .catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    "Não foi possível fechar o ticket."
+                );
+            }
+
+
+            /*
+             * IMPORTANTE:
+             * O ticket NÃO é reaberto depois
+             * de ser fechado.
+             */
+
+            ticketSelecionado = null;
+
+            replyText.value = "";
+
+            replyMessage.textContent =
+                "🔒 Ticket fechado com sucesso.";
+
+            conversationContent.classList.add(
+                "hidden"
+            );
+
+            conversationEmpty.classList.remove(
+                "hidden"
+            );
+
+            messages.innerHTML = "";
+
+            ticketTitle.textContent =
+                "Ticket";
+
+            ticketInfo.textContent =
+                "—";
+
+            ticketStatus.value =
+                "aberto";
+
+
+            await carregarTickets(
+                true
+            );
+
+
+            setTimeout(
+                function() {
+
+                    replyMessage.textContent =
+                        "";
+
+                },
+                2500
+            );
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao fechar ticket:",
+                erro
+            );
+
+            alert(
+                erro.message ||
+                "Erro ao fechar ticket."
+            );
+        }
+    }
+
+
+    replyText.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                responderTicket();
+            }
+        }
+    );
+
+
+    verificarLogin();
+</script>
+
+<script>
+async function carregarEstoquePrecosAdmin() {
+    try {
+        const [estoqueResp, precosResp] = await Promise.all([
+            fetch("/api/admin/estoque"),
+            fetch("/api/admin/precos")
+        ]);
+
+        const estoque = await estoqueResp.json();
+        const precos = await precosResp.json();
+
+        if (!estoqueResp.ok || !estoque.sucesso) {
+            throw new Error(estoque.erro || "Erro ao carregar estoque.");
+        }
+
+        if (!precosResp.ok || !precos.sucesso) {
+            throw new Error(precos.erro || "Erro ao carregar preços.");
+        }
+
+        const mensal = Array.isArray(estoque.mensal) ? estoque.mensal : [];
+        const anual = Array.isArray(estoque.anual) ? estoque.anual : [];
+
+        document.getElementById("estoque-mensal").textContent =
+            mensal.length + " disponíveis";
+
+        document.getElementById("estoque-anual").textContent =
+            anual.length + " disponíveis";
+
+        document.getElementById("preco-mensal").value =
+            Number(precos.mensal).toFixed(2);
+
+        document.getElementById("preco-anual").value =
+            Number(precos.anual).toFixed(2);
+
+        renderizarListaEstoqueAdmin(mensal, anual);
+    } catch (erro) {
+        console.error(erro);
+    }
+}
+
+function renderizarListaEstoqueAdmin(mensal, anual) {
+    const container = document.getElementById("lista-estoque-admin");
+
+    let html = "";
+
+    function grupo(titulo, lista, produto) {
+        let resultado = `
+            <div style="margin-bottom:25px;">
+                <h3>${titulo}</h3>
+        `;
+
+        if (!lista.length) {
+            resultado += `
+                <div style="padding:15px;background:#181818;border-radius:10px;">
+                    Nenhuma conta disponível.
+                </div>
+            `;
+        } else {
+            lista.forEach(function(conta) {
+                resultado += `
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;margin-bottom:8px;background:#181818;border-radius:10px;flex-wrap:wrap;">
+                        <div>
+                            <div><strong>Email:</strong> ${escaparHTMLAdmin(conta.email)}</div>
+                            <div><strong>Senha:</strong> ${escaparHTMLAdmin(conta.senha)}</div>
+                        </div>
+
+                        <button type="button"
+                            onclick="removerContaEstoque('${escaparJSAdmin(conta.id)}','${produto}')"
+                            style="padding:9px 14px;border:0;border-radius:8px;cursor:pointer;">
+                            🗑️ REMOVER
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        resultado += "</div>";
+        return resultado;
+    }
+
+    html += grupo("NITRO MENSAL", mensal, "mensal");
+    html += grupo("NITRO ANUAL", anual, "anual");
+
+    container.innerHTML = html;
+}
+
+function escaparHTMLAdmin(valor) {
+    return String(valor ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function escaparJSAdmin(valor) {
+    return String(valor ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+}
+
+async function adicionarContaEstoque() {
+    const produto = document.getElementById("estoque-produto").value;
+    const email = document.getElementById("estoque-email").value.trim();
+    const senha = document.getElementById("estoque-senha").value.trim();
+
+    if (!email || !senha) {
+        alert("Informe o email e a senha da conta.");
+        return;
+    }
+
+    try {
+        const resposta = await fetch("/api/admin/estoque", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                produto,
+                email,
+                senha
+            })
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || !dados.sucesso) {
+            throw new Error(dados.erro || "Não foi possível adicionar a conta.");
+        }
+
+        document.getElementById("estoque-email").value = "";
+        document.getElementById("estoque-senha").value = "";
+
+        alert("Conta adicionada ao estoque!");
+        carregarEstoquePrecosAdmin();
+    } catch (erro) {
+        alert(erro.message);
+    }
+}
+
+async function removerContaEstoque(id, produto) {
+    if (!confirm("Tem certeza que deseja remover esta conta do estoque?")) {
+        return;
+    }
+
+    try {
+        const resposta = await fetch(
+            "/api/admin/estoque/" +
+            encodeURIComponent(produto) +
+            "/" +
+            encodeURIComponent(id),
+            {
+                method: "DELETE"
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || !dados.sucesso) {
+            throw new Error(dados.erro || "Não foi possível remover a conta.");
+        }
+
+        alert("Conta removida!");
+        carregarEstoquePrecosAdmin();
+    } catch (erro) {
+        alert(erro.message);
+    }
+}
+
+async function salvarPrecosAdmin() {
+    const mensal = Number(document.getElementById("preco-mensal").value);
+    const anual = Number(document.getElementById("preco-anual").value);
+
+    if (!Number.isFinite(mensal) || mensal <= 0 ||
+        !Number.isFinite(anual) || anual <= 0) {
+        alert("Informe preços válidos.");
+        return;
+    }
+
+    try {
+        const resposta = await fetch("/api/admin/precos", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                mensal,
+                anual
+            })
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || !dados.sucesso) {
+            throw new Error(dados.erro || "Não foi possível salvar os preços.");
+        }
+
+        alert("Preços salvos com sucesso!");
+    } catch (erro) {
+        alert(erro.message);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    carregarEstoquePrecosAdmin();
+});
+</script></body>
+</html>

@@ -1,335 +1,1790 @@
+﻿<!DOCTYPE html>
 
-<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>HYPE STORE</title>
 
-    <link rel="stylesheet" href="style.css">
+<meta
+    name="description"
+    content="HYPE STORE — Produtos digitais com entrega rápida, segura e automática."
+>
+
+<title>HYPE STORE — Produtos Digitais</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+    /* =====================================================
+       HYPE STORE — NOVA INTERFACE
+    ===================================================== */
+
+    :root {
+        --purple: #8b5cf6;
+        --purple-light: #a855f7;
+        --purple-dark: #6d28d9;
+        --bg: #060609;
+        --bg-soft: #0b0a10;
+        --card: rgba(17, 14, 25, 0.78);
+        --border: rgba(139, 92, 246, 0.18);
+        --text: #ffffff;
+        --muted: #9895a5;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        margin: 0;
+        background:
+            radial-gradient(
+                circle at 15% 10%,
+                rgba(139, 92, 246, 0.13),
+                transparent 30%
+            ),
+            radial-gradient(
+                circle at 85% 30%,
+                rgba(168, 85, 247, 0.08),
+                transparent 28%
+            ),
+            var(--bg);
+        color: var(--text);
+        overflow-x: hidden;
+    }
+
+    /* Fundo quadriculado */
+
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -5;
+
+        background-image:
+            linear-gradient(
+                rgba(255, 255, 255, 0.018) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.018) 1px,
+                transparent 1px
+            );
+
+        background-size: 44px 44px;
+
+        mask-image: linear-gradient(
+            to bottom,
+            black 0%,
+            rgba(0, 0, 0, 0.65) 60%,
+            transparent 100%
+        );
+    }
+
+    /* =====================================================
+       QUADRADOS ANIMADOS
+    ===================================================== */
+
+    .hype-floating-background {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: -4;
+    }
+
+    .hype-floating-square {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+
+        border: 1px solid rgba(168, 85, 247, 0.22);
+        background: rgba(139, 92, 246, 0.025);
+
+        box-shadow:
+            0 0 25px rgba(139, 92, 246, 0.08);
+
+        transform: rotate(45deg);
+
+        animation:
+            hypeSquareFloat
+            linear
+            infinite;
+    }
+
+    .hype-floating-square:nth-child(1) {
+        left: 5%;
+        top: 75%;
+        width: 22px;
+        height: 22px;
+        animation-duration: 19s;
+    }
+
+    .hype-floating-square:nth-child(2) {
+        left: 14%;
+        top: 45%;
+        width: 34px;
+        height: 34px;
+        animation-duration: 24s;
+        animation-delay: -7s;
+    }
+
+    .hype-floating-square:nth-child(3) {
+        left: 29%;
+        top: 85%;
+        width: 17px;
+        height: 17px;
+        animation-duration: 21s;
+        animation-delay: -12s;
+    }
+
+    .hype-floating-square:nth-child(4) {
+        left: 45%;
+        top: 60%;
+        width: 42px;
+        height: 42px;
+        animation-duration: 27s;
+        animation-delay: -5s;
+    }
+
+    .hype-floating-square:nth-child(5) {
+        left: 62%;
+        top: 90%;
+        width: 25px;
+        height: 25px;
+        animation-duration: 22s;
+        animation-delay: -15s;
+    }
+
+    .hype-floating-square:nth-child(6) {
+        left: 76%;
+        top: 48%;
+        width: 18px;
+        height: 18px;
+        animation-duration: 20s;
+        animation-delay: -9s;
+    }
+
+    .hype-floating-square:nth-child(7) {
+        left: 91%;
+        top: 80%;
+        width: 35px;
+        height: 35px;
+        animation-duration: 25s;
+        animation-delay: -18s;
+    }
+
+    @keyframes hypeSquareFloat {
+        0% {
+            transform:
+                translate3d(0, 100px, 0)
+                rotate(45deg);
+            opacity: 0;
+        }
+
+        12% {
+            opacity: 0.65;
+        }
+
+        50% {
+            transform:
+                translate3d(45px, -80px, 0)
+                rotate(135deg);
+            opacity: 0.85;
+        }
+
+        80% {
+            opacity: 0.35;
+        }
+
+        100% {
+            transform:
+                translate3d(-35px, -260px, 0)
+                rotate(225deg);
+            opacity: 0;
+        }
+    }
+
+    /* =====================================================
+       HEADER
+    ===================================================== */
+
+    .header {
+        background: rgba(6, 6, 9, 0.76) !important;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+
+        border-bottom:
+            1px solid rgba(139, 92, 246, 0.12) !important;
+
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .logo-icon {
+        box-shadow:
+            0 0 25px rgba(139, 92, 246, 0.28);
+    }
+
+    /* =====================================================
+       HERO
+    ===================================================== */
+
+    .hero {
+        position: relative;
+    }
+
+    .hero::before {
+        content: "";
+        position: absolute;
+
+        width: 420px;
+        height: 420px;
+
+        left: -220px;
+        top: 80px;
+
+        border-radius: 50%;
+
+        background:
+            rgba(139, 92, 246, 0.08);
+
+        filter: blur(80px);
+
+        pointer-events: none;
+    }
+
+    .hero::after {
+        content: "";
+        position: absolute;
+
+        width: 350px;
+        height: 350px;
+
+        right: -180px;
+        top: 180px;
+
+        border-radius: 50%;
+
+        background:
+            rgba(168, 85, 247, 0.06);
+
+        filter: blur(80px);
+
+        pointer-events: none;
+    }
+
+    .hero-card {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(27, 22, 40, 0.86),
+                rgba(10, 9, 15, 0.82)
+            ) !important;
+
+        border:
+            1px solid rgba(168, 85, 247, 0.2) !important;
+
+        box-shadow:
+            0 25px 80px rgba(0, 0, 0, 0.38),
+            inset 0 1px rgba(255, 255, 255, 0.04);
+
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+
+        transition:
+            transform 0.35s ease,
+            border-color 0.35s ease,
+            box-shadow 0.35s ease;
+    }
+
+    .hero-card:hover {
+        transform: translateY(-7px);
+
+        border-color:
+            rgba(168, 85, 247, 0.4) !important;
+
+        box-shadow:
+            0 30px 90px rgba(0, 0, 0, 0.45),
+            0 0 45px rgba(139, 92, 246, 0.1);
+    }
+
+    .hero-content h1 span {
+        text-shadow:
+            0 0 35px rgba(139, 92, 246, 0.22);
+    }
+
+    /* =====================================================
+       CARDS
+    ===================================================== */
+
+    .benefit,
+    .product-card,
+    .support-card {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(20, 17, 30, 0.8),
+                rgba(10, 9, 14, 0.76)
+            ) !important;
+
+        border:
+            1px solid rgba(139, 92, 246, 0.15) !important;
+
+        box-shadow:
+            0 18px 60px rgba(0, 0, 0, 0.2),
+            inset 0 1px rgba(255, 255, 255, 0.025);
+
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .product-card {
+        position: relative;
+        overflow: hidden;
+
+        transition:
+            transform 0.3s ease,
+            border-color 0.3s ease,
+            box-shadow 0.3s ease;
+    }
+
+    .product-card::before {
+        content: "";
+
+        position: absolute;
+
+        width: 180px;
+        height: 180px;
+
+        right: -100px;
+        top: -100px;
+
+        border-radius: 50%;
+
+        background:
+            rgba(139, 92, 246, 0.1);
+
+        filter: blur(30px);
+
+        pointer-events: none;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+
+        border-color:
+            rgba(168, 85, 247, 0.38) !important;
+
+        box-shadow:
+            0 25px 70px rgba(0, 0, 0, 0.38),
+            0 0 40px rgba(139, 92, 246, 0.08);
+    }
+
+    .benefit {
+        transition:
+            transform 0.3s ease,
+            border-color 0.3s ease;
+    }
+
+    .benefit:hover {
+        transform: translateY(-4px);
+
+        border-color:
+            rgba(168, 85, 247, 0.32) !important;
+    }
+
+    /* =====================================================
+       BOTÕES
+    ===================================================== */
+
+    .button-primary,
+    .button-secondary,
+    .buy-button,
+    .checkout-button,
+    .cart-button {
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            filter 0.2s ease;
+    }
+
+    .button-primary:hover,
+    .buy-button:hover,
+    .checkout-button:hover {
+        transform: translateY(-2px);
+
+        filter: brightness(1.08);
+
+        box-shadow:
+            0 12px 35px rgba(139, 92, 246, 0.2);
+    }
+
+    /* =====================================================
+       MODAIS
+    ===================================================== */
+
+    .modal-overlay {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .modal {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(20, 17, 30, 0.96),
+                rgba(8, 7, 12, 0.97)
+            ) !important;
+
+        border:
+            1px solid rgba(168, 85, 247, 0.22) !important;
+
+        box-shadow:
+            0 35px 100px rgba(0, 0, 0, 0.6),
+            0 0 60px rgba(139, 92, 246, 0.08) !important;
+    }
+
+    /* =====================================================
+       RESPONSIVO
+    ===================================================== */
+
+    @media (max-width: 700px) {
+        .hype-floating-square:nth-child(n + 5) {
+            display: none;
+        }
+
+        .hero-card:hover,
+        .product-card:hover {
+            transform: translateY(-4px);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .hype-floating-square {
+            animation: none;
+        }
+
+        html {
+            scroll-behavior: auto;
+        }
+    }
+/* =====================================================
+   HYPE STORE — INTERFACE DO ATENDIMENTO
+===================================================== */
+
+#modal-ticket {
+    background:
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(139, 92, 246, 0.14),
+            rgba(0, 0, 0, 0.82) 55%
+        ) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+#modal-ticket .ticket-modal {
+    position: relative;
+    width: min(540px, calc(100% - 28px));
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 34px;
+    border-radius: 24px !important;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(25, 20, 38, 0.98),
+            rgba(8, 7, 13, 0.98)
+        ) !important;
+    border: 1px solid rgba(168, 85, 247, 0.24) !important;
+    box-shadow:
+        0 35px 100px rgba(0, 0, 0, 0.65),
+        0 0 80px rgba(139, 92, 246, 0.10),
+        inset 0 1px rgba(255, 255, 255, 0.045);
+    animation: ticketModalIn 0.28s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes ticketModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#modal-ticket .ticket-modal::before {
+    content: "";
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 0;
+    height: 1px;
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(168, 85, 247, 0.9),
+            transparent
+        );
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.7);
+    pointer-events: none;
+}
+
+#modal-ticket .modal-header {
+    position: relative;
+    text-align: left;
+    padding-left: 70px;
+    margin-bottom: 30px;
+}
+
+#modal-ticket .modal-header::before {
+    content: "💬";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(139, 92, 246, 0.24),
+            rgba(109, 40, 217, 0.08)
+        );
+    border: 1px solid rgba(168, 85, 247, 0.28);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.12);
+    font-size: 25px;
+}
+
+#modal-ticket .modal-label {
+    display: inline-block;
+    margin-bottom: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+    color: #a855f7;
+}
+
+#modal-ticket .modal-header h2 {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+#modal-ticket .modal-header p {
+    margin: 9px 0 0;
+    color: #9994a8;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#modal-ticket .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.035) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    color: #aaa5b5;
+    font-size: 22px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+#modal-ticket .modal-close:hover {
+    color: #fff;
+    background: rgba(239, 68, 68, 0.12) !important;
+    border-color: rgba(239, 68, 68, 0.25) !important;
+    transform: rotate(90deg);
+}
+
+#modal-ticket .form-group {
+    margin-bottom: 19px;
+}
+
+#modal-ticket .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #d8d4df;
+}
+
+#modal-ticket .form-group label::after {
+    content: " *";
+    color: #a855f7;
+}
+
+#modal-ticket input,
+#modal-ticket textarea {
+    width: 100%;
+    border-radius: 13px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+    color: #fff !important;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+#modal-ticket input {
+    height: 49px;
+    padding: 0 15px;
+}
+
+#modal-ticket textarea {
+    min-height: 125px;
+    padding: 14px 15px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+#modal-ticket input::placeholder,
+#modal-ticket textarea::placeholder {
+    color: #666271;
+}
+
+#modal-ticket input:hover,
+#modal-ticket textarea:hover {
+    border-color: rgba(168, 85, 247, 0.2) !important;
+    background: rgba(255, 255, 255, 0.045) !important;
+}
+
+#modal-ticket input:focus,
+#modal-ticket textarea:focus {
+    border-color: rgba(168, 85, 247, 0.62) !important;
+    background: rgba(139, 92, 246, 0.045) !important;
+    box-shadow:
+        0 0 0 3px rgba(139, 92, 246, 0.08),
+        0 0 25px rgba(139, 92, 246, 0.07);
+    transform: translateY(-1px);
+}
+
+#modal-ticket .form-group:last-of-type {
+    margin-bottom: 22px;
+}
+
+#modal-ticket .checkout-button {
+    position: relative;
+    width: 100%;
+    min-height: 52px;
+    border: none !important;
+    border-radius: 14px !important;
+    background:
+        linear-gradient(
+            135deg,
+            #8b5cf6,
+            #7c3aed
+        ) !important;
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(124, 58, 237, 0.2);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+#modal-ticket .checkout-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 70%;
+    height: 100%;
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.14),
+            transparent
+        );
+    transform: skewX(-20deg);
+    transition: left 0.55s ease;
+}
+
+#modal-ticket .checkout-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: 0 16px 38px rgba(124, 58, 237, 0.3);
+}
+
+#modal-ticket .checkout-button:hover::before {
+    left: 140%;
+}
+
+#modal-ticket .checkout-button:active {
+    transform: translateY(0);
+}
+
+#modal-ticket .ticket-feedback {
+    min-height: 20px;
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #918c9e;
+}
+
+#modal-ticket .ticket-feedback.success {
+    color: #86efac;
+}
+
+#modal-ticket .ticket-feedback.error {
+    color: #fca5a5;
+}
+
+#modal-ticket .ticket-feedback.loading {
+    color: #c4b5fd;
+}
+
+#modal-ticket .ticket-modal::-webkit-scrollbar {
+    width: 5px;
+}
+
+#modal-ticket .ticket-modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#modal-ticket .ticket-modal::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.35);
+    border-radius: 20px;
+}
+
+@media (max-width: 600px) {
+    #modal-ticket .ticket-modal {
+        width: calc(100% - 20px);
+        padding: 27px 20px 22px;
+        border-radius: 21px !important;
+    }
+
+    #modal-ticket .modal-header {
+        padding-left: 62px;
+        margin-bottom: 24px;
+    }
+
+    #modal-ticket .modal-header::before {
+        width: 47px;
+        height: 47px;
+        border-radius: 14px;
+        font-size: 21px;
+    }
+
+    #modal-ticket .modal-header h2 {
+        font-size: 23px;
+    }
+
+    #modal-ticket .modal-header p {
+        font-size: 12px;
+    }
+
+    #modal-ticket .modal-close {
+        top: 14px;
+        right: 14px;
+        width: 34px;
+        height: 34px;
+    }
+
+    #modal-ticket input {
+        height: 47px;
+    }
+
+    #modal-ticket textarea {
+        min-height: 115px;
+    }
+}
+</style>
+
+
 </head>
 
 <body>
 
-    <header class="header">
 
-        <div class="logo">
-            HYPE<span>STORE</span>
-        </div>
+<!-- FUNDO ANIMADO -->
 
-        <nav>
-            <a href="#inicio">Início</a>
-            <a href="#produtos">Produtos</a>
-            <a href="#contato">Contato</a>
-            <a href="#suporte">Suporte</a>
+<div
+    class="hype-floating-background"
+    aria-hidden="true"
+>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+    <span class="hype-floating-square"></span>
+</div>
+
+
+<!-- =====================================================
+     HEADER
+====================================================== -->
+
+<header class="header">
+
+    <div class="header-container">
+
+        <a
+            href="#inicio"
+            class="logo"
+            aria-label="HYPE STORE"
+        >
+            <div class="logo-icon">H</div>
+
+            <div class="logo-text">
+                HYPE<span>STORE</span>
+            </div>
+        </a>
+
+
+        <nav class="nav">
+
+            <a
+                href="#inicio"
+                class="active"
+            >
+                Início
+            </a>
+
+            <a href="#produtos">
+                Produtos
+            </a>
+
+            <a href="#como-funciona">
+                Como funciona
+            </a>
+
+            <a href="#suporte">
+                Suporte
+            </a>
+
         </nav>
 
+
         <button
-            class="carrinho-btn"
-            id="abrir-carrinho"
-            onclick="abrirCarrinho()">
+            class="cart-button"
+            type="button"
+            onclick="abrirCarrinho()"
+        >
+            <span class="cart-icon">🛒</span>
 
-            🛒 Carrinho
-            <span id="contador-carrinho">0</span>
+            <span>
+                Carrinho
+            </span>
 
+            <span
+                class="cart-count"
+                id="contador-carrinho"
+            >
+                0
+            </span>
         </button>
 
-    </header>
+    </div>
+
+</header>
 
 
-    <main>
+<!-- =====================================================
+     HERO
+====================================================== -->
 
-        <!-- HERO -->
+<main>
 
-        <section class="hero" id="inicio">
+    <section
+        class="hero"
+        id="inicio"
+    >
 
-            <div class="hero-conteudo">
+        <div class="container hero-container">
 
-                <span class="tag">
-                    ⚡ ENTREGA RÁPIDA
-                </span>
+            <div class="hero-content">
+
+                <div class="hero-badge">
+                    <span class="status-dot"></span>
+                    Loja online • Entrega automática
+                </div>
+
 
                 <h1>
-                    SUA LOJA
-                    <strong>DIGITAL</strong>
+                    Produtos digitais
+                    <span>sem complicação.</span>
                 </h1>
 
+
                 <p>
-                    Produtos digitais com pagamento seguro,
-                    entrega rápida e suporte.
+                    Compre seus produtos digitais de forma rápida,
+                    segura e automática. Pagamento via PIX e entrega
+                    diretamente no seu e-mail.
                 </p>
 
-                <a
-                    href="#produtos"
-                    class="botao-principal">
 
-                    VER PRODUTOS
+                <div class="hero-buttons">
 
-                </a>
+                    <a
+                        href="#produtos"
+                        class="button-primary"
+                    >
+                        Ver produtos
+                        <span>→</span>
+                    </a>
+
+                    <a
+                        href="#como-funciona"
+                        class="button-secondary"
+                    >
+                        Como funciona
+                    </a>
+
+                </div>
+
+
+                <div class="hero-info">
+
+                    <div>
+                        <strong>✓</strong>
+                        Pagamento seguro
+                    </div>
+
+                    <div>
+                        <strong>✓</strong>
+                        Entrega automática
+                    </div>
+
+                    <div>
+                        <strong>✓</strong>
+                        Suporte disponível
+                    </div>
+
+                </div>
 
             </div>
 
-        </section>
+
+            <div class="hero-card">
+
+                <div class="hero-card-top">
+
+                    <span>
+                        PRODUTO EM DESTAQUE
+                    </span>
+
+                    <div class="online">
+                        <i></i>
+                        ONLINE
+                    </div>
+
+                </div>
 
 
-        <!-- PRODUTOS -->
+                <div class="hero-card-main">
 
-        <section class="produtos" id="produtos">
+                    <div class="hero-card-icon">
+                        💬
+                    </div>
 
-            <div class="titulo-secao">
+                    <div>
 
-                <span>CATÁLOGO</span>
+                        <small>
+                            PRODUTO DIGITAL
+                        </small>
+
+                        <h3>
+                            Nitro Discord
+                        </h3>
+
+                        <p>
+                            Entrega rápida e automática
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="hero-card-price">
+
+                    <span>
+                        A partir de
+                    </span>
+
+                    <strong>
+                        R$ 1,50
+                    </strong>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="hero-card-button"
+                    onclick="adicionarCarrinho('Nitro Discord Mensal', 1.50, 'Mensal')"
+                >
+                    Comprar agora
+                    <span>→</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         BENEFÍCIOS
+    ====================================================== -->
+
+    <section class="benefits">
+
+        <div class="container benefits-grid">
+
+            <div class="benefit">
+
+                <div class="benefit-icon">
+                    ⚡
+                </div>
+
+                <div>
+                    <strong>
+                        Entrega rápida
+                    </strong>
+
+                    <span>
+                        Receba após a aprovação
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="benefit">
+
+                <div class="benefit-icon">
+                    🔒
+                </div>
+
+                <div>
+                    <strong>
+                        Compra segura
+                    </strong>
+
+                    <span>
+                        Pagamento protegido
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="benefit">
+
+                <div class="benefit-icon">
+                    📦
+                </div>
+
+                <div>
+                    <strong>
+                        Entrega automática
+                    </strong>
+
+                    <span>
+                        Sem precisar esperar
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="benefit">
+
+                <div class="benefit-icon">
+                    💬
+                </div>
+
+                <div>
+                    <strong>
+                        Suporte
+                    </strong>
+
+                    <span>
+                        Atendimento quando precisar
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PRODUTOS
+    ====================================================== -->
+
+    <section
+        class="products-section"
+        id="produtos"
+    >
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="section-label">
+                        CATÁLOGO
+                    </span>
+
+                    <h2>
+                        Nossos produtos
+                    </h2>
+
+                    <p>
+                        Escolha seu produto e finalize sua compra.
+                    </p>
+
+                </div>
+
+
+                <div class="catalog-count">
+                    2 produtos disponíveis
+                </div>
+
+            </div>
+
+
+            <div class="catalog-toolbar">
+
+                <div class="search-box">
+
+                    <span>
+                        ⌕
+                    </span>
+
+                    <input
+                        type="text"
+                        id="campo-pesquisa"
+                        placeholder="Pesquisar produtos..."
+                        autocomplete="off"
+                        oninput="pesquisarProdutos()"
+                    >
+
+                </div>
+
+
+                <select
+                    class="category-select"
+                    id="filtro-categoria"
+                >
+
+                    <option value="todos">
+                        Todos os produtos
+                    </option>
+
+                    <option value="discord">
+                        Discord
+                    </option>
+
+                    <option value="digital">
+                        Produtos digitais
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div
+                class="products-grid"
+                id="lista-produtos"
+            >
+
+                <article
+                    class="product-card"
+                    data-produto="nitro discord mensal"
+                    data-categoria="discord"
+                >
+
+                    <div class="product-image">
+
+                        <span class="product-tag">
+                            MAIS VENDIDO
+                        </span>
+
+                        <div class="product-icon discord-icon">
+                            💬
+                        </div>
+
+                    </div>
+
+
+                    <div class="product-content">
+
+                        <div class="product-category">
+                            DISCORD
+                        </div>
+
+                        <h3>
+                            Nitro Discord Mensal
+                        </h3>
+
+                        <p>
+                            Nitro Discord com validade mensal.
+                            Produto digital com entrega rápida
+                            após a confirmação do pagamento.
+                        </p>
+
+
+                        <div class="product-bottom">
+
+                            <div class="price">
+
+                                <small>
+                                    A partir de
+                                </small>
+
+                                <strong>
+                                    R$ 1,50
+                                </strong>
+
+                            </div>
+
+
+                            <button
+                                class="buy-button"
+                                type="button"
+                                onclick="adicionarCarrinho('Nitro Discord Mensal', 1.50, 'Mensal')"
+                            >
+                                Comprar
+                                <span>→</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+
+                <article
+                    class="product-card"
+                    data-produto="nitro discord anual"
+                    data-categoria="discord"
+                >
+
+                    <div class="product-image">
+
+                        <span class="product-tag premium">
+                            PREMIUM
+                        </span>
+
+                        <div class="product-icon discord-icon">
+                            💬
+                        </div>
+
+                    </div>
+
+
+                    <div class="product-content">
+
+                        <div class="product-category">
+                            DISCORD
+                        </div>
+
+                        <h3>
+                            Nitro Discord Anual
+                        </h3>
+
+                        <p>
+                            Nitro Discord com validade anual.
+                            Produto digital entregue automaticamente
+                            após a confirmação do pagamento.
+                        </p>
+
+
+                        <div class="product-bottom">
+
+                            <div class="price">
+
+                                <small>
+                                    A partir de
+                                </small>
+
+                                <strong>
+                                    R$ 1,50
+                                </strong>
+
+                            </div>
+
+
+                            <button
+                                class="buy-button"
+                                type="button"
+                                onclick="adicionarCarrinho('Nitro Discord Anual', 1.50, 'Anual')"
+                            >
+                                Comprar
+                                <span>→</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+
+            <div
+                class="empty-products"
+                id="produtos-vazios"
+            >
+
+                <div>
+                    ⌕
+                </div>
+
+                <h3>
+                    Nenhum produto encontrado
+                </h3>
+
+                <p>
+                    Tente pesquisar por outro nome.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         COMO FUNCIONA
+    ====================================================== -->
+
+    <section
+        class="how-section"
+        id="como-funciona"
+    >
+
+        <div class="container">
+
+            <div class="section-heading centered">
+
+                <span class="section-label">
+                    SIMPLES E RÁPIDO
+                </span>
 
                 <h2>
-                    Nossos Produtos
+                    Como funciona?
                 </h2>
 
                 <p>
-                    Escolha seu produto e adicione ao carrinho.
+                    Você compra em poucos passos e recebe
+                    seu produto sem complicação.
                 </p>
 
             </div>
 
 
-            <div class="cards">
+            <div class="steps">
 
-                <!-- PRODUTO 1 - NITRO DISCORD -->
+                <div class="step">
 
-                <article class="card">
+                    <span class="step-number">
+                        01
+                    </span>
 
-                    <div class="icone">
+                    <div class="step-icon">
+                        🛒
+                    </div>
+
+                    <h3>
+                        Escolha seu produto
+                    </h3>
+
+                    <p>
+                        Selecione o produto que deseja
+                        comprar e adicione ao carrinho.
+                    </p>
+
+                </div>
+
+
+                <div class="step-line"></div>
+
+
+                <div class="step">
+
+                    <span class="step-number">
+                        02
+                    </span>
+
+                    <div class="step-icon">
                         ⚡
                     </div>
 
                     <h3>
-                        Nitro Discord
+                        Faça o pagamento
                     </h3>
 
                     <p>
-                        Escolha a duração do seu Nitro.
+                        Preencha seus dados e pague
+                        utilizando PIX.
                     </p>
 
-
-                    <button
-                        class="comprar-produto"
-                        onclick="adicionarCarrinho('Nitro Discord', 4.50, 'Anual')">
-
-                        Nitro Anual — R$ 4,50
-
-                    </button>
+                </div>
 
 
-                    <button
-                        class="comprar-produto"
-                        onclick="adicionarCarrinho('Nitro Discord', 2.50, 'Mensal')">
-
-                        Nitro Mensal — R$ 2,50
-
-                    </button>
-
-                </article>
+                <div class="step-line"></div>
 
 
-                <!-- PRODUTO 2 -->
+                <div class="step">
 
-                <article class="card">
+                    <span class="step-number">
+                        03
+                    </span>
 
-                    <div class="icone">
-                        🚀
+                    <div class="step-icon">
+                        📦
                     </div>
 
                     <h3>
-                        Impulsos Discord
+                        Receba automaticamente
                     </h3>
 
                     <p>
-                        Impulsione seu servidor de forma rápida.
+                        Após a confirmação, sua entrega
+                        é processada automaticamente.
                     </p>
 
-                    <div class="preco">
-                        R$ 15,00
-                    </div>
-
-                    <button
-                        class="comprar-produto"
-                        data-nome="Impulsos Discord"
-                        data-preco="15"
-                        onclick="adicionarCarrinho('Impulsos Discord', 15)">
-
-                        COMPRAR
-
-                    </button>
-
-                </article>
-
-
-                <!-- PRODUTO 3 -->
-
-                <article class="card">
-
-                    <div class="icone">
-                        💎
-                    </div>
-
-                    <h3>
-                        Produto Digital
-                    </h3>
-
-                    <p>
-                        Produto digital com entrega automática.
-                    </p>
-
-                    <div class="preco">
-                        R$ 20,00
-                    </div>
-
-                    <button
-                        class="comprar-produto"
-                        data-nome="Produto Digital"
-                        data-preco="20"
-                        onclick="adicionarCarrinho('Produto Digital', 20)">
-
-                        COMPRAR
-
-                    </button>
-
-                </article>
+                </div>
 
             </div>
 
-        </section>
+        </div>
+
+    </section>
 
 
-        <!-- SUPORTE -->
+    <!-- =====================================================
+         SUPORTE
+    ====================================================== -->
 
-        <section id="suporte" class="suporte">
+    <section
+        class="support-section"
+        id="suporte"
+    >
 
-            <div class="suporte-container">
+        <div class="container">
 
-                <div class="suporte-icone">
-                    💬
+            <div class="support-card">
+
+                <div>
+
+                    <span class="section-label">
+                        PRECISA DE AJUDA?
+                    </span>
+
+                    <h2>
+                        Fale com o suporte.
+                    </h2>
+
+                    <p>
+                        Abra um atendimento e converse diretamente
+                        com nossa equipe. Sua conversa fica vinculada
+                        ao seu ticket.
+                    </p>
+
                 </div>
 
-                <h2>
-                    Precisa de ajuda?
-                </h2>
 
-                <p>
-                    Nossa equipe está pronta para ajudar você.
-                    Entre no nosso servidor do Discord e fale com o suporte.
-                </p>
+                <div class="support-actions">
 
-                <a
-                    href="https://discord.gg/4EBt7cpNW3"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="botao-suporte">
+                    <button
+                        type="button"
+                        class="button-primary support-ticket-button"
+                        onclick="abrirTicket()"
+                    >
+                        Abrir atendimento
+                        <span>→</span>
+                    </button>
 
-                    ENTRAR NO SUPORTE
 
+                    <button
+                        type="button"
+                        class="button-secondary"
+                        id="btn-minha-conversa"
+                        onclick="abrirMinhaConversa()"
+                    >
+                        Minha conversa
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- =====================================================
+     FOOTER
+====================================================== -->
+
+<footer class="footer">
+
+    <div class="container footer-container">
+
+        <div class="footer-brand">
+
+            <a
+                href="#inicio"
+                class="logo"
+            >
+
+                <div class="logo-icon">
+                    H
+                </div>
+
+                <div class="logo-text">
+                    HYPE<span>STORE</span>
+                </div>
+
+            </a>
+
+
+            <p>
+                Produtos digitais com pagamento seguro,
+                entrega rápida e suporte.
+            </p>
+
+        </div>
+
+
+        <div class="footer-links">
+
+            <div>
+
+                <strong>
+                    Navegação
+                </strong>
+
+                <a href="#inicio">
+                    Início
+                </a>
+
+                <a href="#produtos">
+                    Produtos
+                </a>
+
+                <a href="#como-funciona">
+                    Como funciona
                 </a>
 
             </div>
 
-        </section>
 
-    </main>
+            <div>
 
-
-    <!-- CONTATO / RODAPÉ -->
-
-    <footer id="contato">
-
-        <div class="footer-logo">
-            HYPE STORE
-        </div>
-
-        <p>
-            Produtos digitais com entrega rápida e segura.
-        </p>
-
-        <small>
-            © 2026 HYPE STORE — Todos os direitos reservados.
-        </small>
-
-    </footer>
-
-
-    <!-- CARRINHO -->
-
-    <div
-        class="modal"
-        id="modal-carrinho">
-
-        <div class="modal-conteudo">
-
-            <button
-                class="fechar"
-                id="fechar-carrinho"
-                onclick="fecharCarrinho()">
-
-                ✕
-
-            </button>
-
-            <h2>
-                Seu Carrinho
-            </h2>
-
-            <div id="lista-carrinho"></div>
-
-            <div class="total">
-
-                <span>
-                    Total
-                </span>
-
-                <strong id="total-carrinho">
-                    R$ 0,00
+                <strong>
+                    Suporte
                 </strong>
 
+                <a
+                    href="#suporte"
+                    onclick="abrirTicket(); return false;"
+                >
+                    Atendimento
+                </a>
+
+                <a
+                    href="#suporte"
+                    onclick="abrirMinhaConversa(); return false;"
+                >
+                    Minha conversa
+                </a>
+
             </div>
-
-            <button
-                class="finalizar"
-                id="finalizar-compra"
-                onclick="abrirCheckout()">
-
-                FINALIZAR COMPRA
-
-            </button>
 
         </div>
 
     </div>
 
 
-    <!-- CHECKOUT -->
+    <div class="footer-bottom">
 
-    <div
-        class="modal"
-        id="modal-checkout">
+        <div class="container footer-bottom-inner">
 
-        <div class="modal-conteudo checkout">
+            <span>
+                © <span id="ano"></span> HYPE STORE.
+                Todos os direitos reservados.
+            </span>
 
-            <button
-                class="fechar"
-                id="fechar-checkout"
-                onclick="fecharCheckout()">
+            <span>
+                Loja digital
+            </span>
 
-                ✕
+        </div>
 
-            </button>
+    </div>
+
+</footer>
+
+
+<!-- =====================================================
+     MODAL CARRINHO
+====================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modal-carrinho"
+>
+
+    <div class="modal cart-modal">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="fecharCarrinho()"
+            aria-label="Fechar"
+        >
+            ×
+        </button>
+
+
+        <div class="modal-header">
+
+            <span class="modal-label">
+                SEU PEDIDO
+            </span>
+
+            <h2>
+                Carrinho
+            </h2>
+
+            <p>
+                Revise os produtos antes de continuar.
+            </p>
+
+        </div>
+
+
+        <div
+            class="cart-list"
+            id="lista-carrinho"
+        ></div>
+
+
+        <div class="cart-total">
+
+            <span>
+                Total
+            </span>
+
+            <strong id="total-carrinho">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="checkout-button"
+            onclick="abrirCheckout()"
+        >
+            Continuar para pagamento
+            <span>→</span>
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL CHECKOUT
+====================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modal-checkout"
+>
+
+    <div class="modal checkout-modal">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="fecharCheckout()"
+            aria-label="Fechar"
+        >
+            ×
+        </button>
+
+
+        <div class="modal-header">
+
+            <span class="modal-label">
+                FINALIZAÇÃO
+            </span>
 
             <h2>
                 Finalizar compra
             </h2>
 
             <p>
-                Informe seus dados para continuar.
+                Informe seus dados para receber o produto.
             </p>
+
+        </div>
+
+
+        <div class="form-group">
 
             <label for="nome">
                 Nome
@@ -338,8 +1793,14 @@
             <input
                 type="text"
                 id="nome"
-                placeholder="Digite seu nome">
+                placeholder="Digite seu nome"
+                autocomplete="name"
+            >
 
+        </div>
+
+
+        <div class="form-group">
 
             <label for="discord">
                 Discord
@@ -348,8 +1809,14 @@
             <input
                 type="text"
                 id="discord"
-                placeholder="Seu usuário do Discord">
+                placeholder="Ex: usuario"
+                autocomplete="off"
+            >
 
+        </div>
+
+
+        <div class="form-group">
 
             <label for="email">
                 E-mail
@@ -358,181 +1825,1532 @@
             <input
                 type="email"
                 id="email"
-                placeholder="seuemail@gmail.com">
-
-
-            <!-- PAGAMENTO -->
-
-            <div class="pagamento">
-
-                <h3>
-                    Forma de pagamento
-                </h3>
-
-                <div class="pix">
-
-                    <span>
-                        💠
-                    </span>
-
-                    <div>
-
-                        <strong>
-                            Pix
-                        </strong>
-
-                        <small>
-                            Pagamento instantâneo
-                        </small>
-
-                    </div>
-
-                    <input
-                        type="radio"
-                        name="pagamento"
-                        value="pix"
-                        checked>
-
-                </div>
-
-            </div>
-
-
-            <!-- TOTAL -->
-
-            <div class="total-checkout">
-
-                <span>
-                    Total
-                </span>
-
-                <strong id="total-checkout">
-                    R$ 0,00
-                </strong>
-
-            </div>
-
-
-            <!-- PAGAR -->
-
-            <button
-                class="confirmar"
-                id="btn-pagar-pix"
-                onclick="gerarPagamentoPix()">
-
-                PAGAR COM PIX
-
-            </button>
+                placeholder="seuemail@email.com"
+                autocomplete="email"
+            >
 
         </div>
 
+
+        <div class="checkout-total">
+
+            <span>
+                Total da compra
+            </span>
+
+            <strong id="total-checkout">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="checkout-button"
+            id="btn-pagar-pix"
+            onclick="gerarPagamentoPix()"
+        >
+            Pagar com PIX
+            <span>→</span>
+        </button>
+
     </div>
 
+</div>
 
-    <!-- PAGAMENTO PIX -->
 
-    <div
-        class="modal"
-        id="modal-pix">
+<!-- =====================================================
+     MODAL PIX
+====================================================== -->
 
-        <div class="modal-conteudo pix-pagamento">
+<div
+    class="modal-overlay"
+    id="modal-pix"
+>
 
-            <button
-                class="fechar"
-                id="fechar-pix"
-                onclick="fecharPix()">
+    <div class="modal pix-modal">
 
-                ✕
+        <button
+            class="modal-close"
+            type="button"
+            onclick="fecharPix()"
+            aria-label="Fechar"
+        >
+            ×
+        </button>
 
-            </button>
+
+        <div class="modal-header centered">
+
+            <span class="modal-label">
+                PAGAMENTO PIX
+            </span>
 
             <h2>
-                Pagamento via Pix
+                Finalize seu pagamento
             </h2>
 
             <p>
-                Escaneie o QR Code ou copie o código Pix.
+                Escaneie o QR Code ou use o código copia e cola.
             </p>
 
+        </div>
 
-            <!-- QR CODE -->
 
-            <div id="qr-code-container">
+        <div class="pix-status">
 
-                <img
-                    id="qr-code"
-                    src=""
-                    alt="QR Code Pix"
-                    style="
-                        max-width: 250px;
-                        width: 100%;
-                        display: none;
-                        margin: 20px auto;
-                    ">
+            <span
+                id="status-pix"
+                class="status-pix"
+            >
+                🟡 AGUARDANDO PAGAMENTO...
+            </span>
 
-                <div class="carregando">
-                    Gerando pagamento...
-                </div>
+        </div>
 
+
+        <div class="qr-wrapper">
+
+            <img
+                id="qr-code"
+                class="qr-code"
+                src=""
+                alt="QR Code PIX"
+            >
+
+            <div
+                id="qr-placeholder"
+                class="qr-placeholder"
+            >
+                QR
             </div>
 
+        </div>
 
-            <!-- PIX COPIA E COLA -->
 
-            <div class="copia-pix">
+        <div class="pix-copy">
+
+            <label for="pix-copia-cola">
+                PIX COPIA E COLA
+            </label>
+
+            <div class="copy-row">
 
                 <input
                     type="text"
                     id="pix-copia-cola"
                     readonly
-                    placeholder="Código Pix">
+                >
 
                 <button
-                    id="copiar-pix"
-                    onclick="copiarPix()">
-
-                    COPIAR
-
+                    type="button"
+                    onclick="copiarPix()"
+                >
+                    Copiar
                 </button>
 
             </div>
 
-
-            <!-- STATUS -->
-
-            <div
-                class="status-pagamento"
-                id="status-pix">
-
-                🟡 Aguardando pagamento...
-
-            </div>
+        </div>
 
 
-            <!-- PEDIDO -->
+        <div class="order-info">
 
-            <div
-                id="pedido-id"
-                style="margin-top: 10px;">
-            </div>
+            <span>
+                Pedido
+            </span>
+
+            <strong id="pedido-id">
+                -
+            </strong>
+
+        </div>
 
 
-            <!-- MENSAGEM -->
+        <div
+            class="payment-message"
+            id="mensagem-pagamento"
+        >
+            <span>
+                Após realizar o pagamento,
+                aguarde a confirmação automática.
+            </span>
+        </div>
 
-            <div
-                id="mensagem-pagamento"
-                style="margin-top: 15px;">
-            </div>
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL ABRIR TICKET
+====================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modal-ticket"
+>
+
+    <div class="modal ticket-modal">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="fecharTicket()"
+            aria-label="Fechar"
+        >
+            ×
+        </button>
+
+
+        <div class="modal-header">
+
+            <span class="modal-label">
+                SUPORTE
+            </span>
+
+            <h2>
+                Abrir atendimento
+            </h2>
+
+            <p>
+                Envie sua dúvida para nossa equipe.
+            </p>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="ticket-nome">
+                Seu nome
+            </label>
+
+            <input
+                type="text"
+                id="ticket-nome"
+                placeholder="Digite seu nome"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="ticket-email">
+                E-mail
+            </label>
+
+            <input
+                type="email"
+                id="ticket-email"
+                placeholder="seuemail@email.com"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="ticket-assunto">
+                Assunto
+            </label>
+
+            <input
+                type="text"
+                id="ticket-assunto"
+                placeholder="Ex: Problema com pedido"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="ticket-mensagem">
+                Mensagem
+            </label>
+
+            <textarea
+                id="ticket-mensagem"
+                placeholder="Explique o que aconteceu..."
+            ></textarea>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="checkout-button"
+            onclick="criarTicket()"
+        >
+            Enviar atendimento
+            <span>→</span>
+        </button>
+
+
+        <div
+            id="ticket-feedback"
+            class="ticket-feedback"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL MINHA CONVERSA
+====================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modal-conversa"
+>
+
+    <div class="modal conversation-modal">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="fecharMinhaConversa()"
+            aria-label="Fechar"
+        >
+            ×
+        </button>
+
+
+        <div class="modal-header">
+
+            <span class="modal-label">
+                ATENDIMENTO
+            </span>
+
+            <h2>
+                Minha conversa
+            </h2>
+
+            <p id="conversa-info">
+                Acompanhe as mensagens do seu atendimento.
+            </p>
+
+        </div>
+
+
+        <div
+            class="conversation-messages"
+            id="conversa-mensagens"
+        ></div>
+
+
+        <div class="conversation-input">
+
+            <textarea
+                id="conversa-texto"
+                placeholder="Digite sua mensagem..."
+            ></textarea>
+
+
+            <button
+                type="button"
+                class="checkout-button"
+                onclick="enviarMensagemTicket()"
+            >
+                Enviar mensagem
+                <span>→</span>
+            </button>
 
         </div>
 
     </div>
 
+</div>
 
-    <!-- JAVASCRIPT -->
 
-    <script src="script.js"></script>
+<!-- =====================================================
+     SCRIPT PRINCIPAL
+====================================================== -->
 
+<script src="script.js"></script>
+
+
+<!-- =====================================================
+     SISTEMA DE TICKETS
+====================================================== -->
+
+<script>
+
+    const TICKET_STORAGE_KEY = "hype_store_ticket";
+
+    let intervaloTicket = null;
+
+
+    function obterTicketSalvo() {
+
+        try {
+
+            const dados =
+                localStorage.getItem(
+                    TICKET_STORAGE_KEY
+                );
+
+            if (!dados) {
+                return null;
+            }
+
+            return JSON.parse(dados);
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao ler ticket:",
+                erro
+            );
+
+            return null;
+        }
+    }
+
+
+    function salvarTicket(ticket) {
+
+        localStorage.setItem(
+            TICKET_STORAGE_KEY,
+            JSON.stringify(ticket)
+        );
+    }
+
+
+    function escaparHTML(valor) {
+
+        const div =
+            document.createElement("div");
+
+        div.textContent =
+            String(valor ?? "");
+
+        return div.innerHTML;
+    }
+
+
+    function formatarDataTicket(data) {
+
+        if (!data) {
+            return "";
+        }
+
+        const dataObj =
+            new Date(data);
+
+        if (Number.isNaN(dataObj.getTime())) {
+            return "";
+        }
+
+        return dataObj.toLocaleString(
+            "pt-BR",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+    }
+
+
+    function abrirTicket() {
+
+        const modal =
+            document.getElementById(
+                "modal-ticket"
+            );
+
+        if (!modal) {
+            return;
+        }
+
+
+        const salvo =
+            obterTicketSalvo();
+
+
+        if (salvo) {
+
+            abrirMinhaConversa();
+
+            return;
+        }
+
+
+        modal.style.display =
+            "flex";
+
+        document.body.classList.add(
+            "modal-aberto"
+        );
+    }
+
+
+    function fecharTicket() {
+
+        const modal =
+            document.getElementById(
+                "modal-ticket"
+            );
+
+        if (modal) {
+
+            modal.style.display =
+                "none";
+        }
+
+
+        document.body.classList.remove(
+            "modal-aberto"
+        );
+    }
+
+
+    async function criarTicket() {
+
+        const nome =
+            document.getElementById(
+                "ticket-nome"
+            )?.value.trim();
+
+        const email =
+            document.getElementById(
+                "ticket-email"
+            )?.value.trim();
+
+        const assunto =
+            document.getElementById(
+                "ticket-assunto"
+            )?.value.trim();
+
+        const mensagem =
+            document.getElementById(
+                "ticket-mensagem"
+            )?.value.trim();
+
+        const feedback =
+            document.getElementById(
+                "ticket-feedback"
+            );
+
+
+        if (!nome) {
+
+            alert(
+                "Digite seu nome."
+            );
+
+            return;
+        }
+
+
+        if (
+            !email ||
+            !email.includes("@")
+        ) {
+
+            alert(
+                "Digite um e-mail válido."
+            );
+
+            return;
+        }
+
+
+        if (!assunto) {
+
+            alert(
+                "Digite o assunto."
+            );
+
+            return;
+        }
+
+
+        if (!mensagem) {
+
+            alert(
+                "Digite sua mensagem."
+            );
+
+            return;
+        }
+
+
+        if (feedback) {
+
+            feedback.textContent =
+                "Enviando atendimento...";
+
+            feedback.className =
+                "ticket-feedback loading";
+        }
+
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/tickets",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                nome,
+                                email,
+                                assunto,
+                                mensagem
+                            })
+                    }
+                );
+
+
+            let dados = {};
+
+            try {
+
+                dados =
+                    await resposta.json();
+
+            } catch (erro) {
+
+                dados = {};
+            }
+
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.erro ||
+                    dados.message ||
+                    "Não foi possível abrir o atendimento."
+                );
+            }
+
+
+            const ticket = {
+
+                id:
+                    dados.id ||
+                    dados.ticket?.id,
+
+                token:
+                    dados.token ||
+                    dados.ticket?.token
+
+            };
+
+
+            if (
+                !ticket.id ||
+                !ticket.token
+            ) {
+
+                throw new Error(
+                    "O servidor não retornou os dados do ticket."
+                );
+            }
+
+
+            salvarTicket(ticket);
+
+
+            if (feedback) {
+
+                feedback.textContent =
+                    "Atendimento criado com sucesso!";
+
+                feedback.className =
+                    "ticket-feedback success";
+            }
+
+
+            document.getElementById(
+                "ticket-nome"
+            ).value = "";
+
+            document.getElementById(
+                "ticket-email"
+            ).value = "";
+
+            document.getElementById(
+                "ticket-assunto"
+            ).value = "";
+
+            document.getElementById(
+                "ticket-mensagem"
+            ).value = "";
+
+
+            setTimeout(
+                () => {
+
+                    fecharTicket();
+
+                    abrirMinhaConversa();
+
+                },
+                700
+            );
+
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao criar ticket:",
+                erro
+            );
+
+
+            if (feedback) {
+
+                feedback.textContent =
+                    erro.message ||
+                    "Erro ao criar atendimento.";
+
+                feedback.className =
+                    "ticket-feedback error";
+            }
+        }
+    }
+
+
+    function abrirMinhaConversa() {
+
+        const salvo =
+            obterTicketSalvo();
+
+
+        if (
+            !salvo ||
+            !salvo.id ||
+            !salvo.token
+        ) {
+
+            abrirTicket();
+
+            return;
+        }
+
+
+        const modal =
+            document.getElementById(
+                "modal-conversa"
+            );
+
+
+        if (!modal) {
+            return;
+        }
+
+
+        modal.style.display =
+            "flex";
+
+        document.body.classList.add(
+            "modal-aberto"
+        );
+
+
+        carregarMinhaConversa();
+
+
+        if (intervaloTicket) {
+
+            clearInterval(
+                intervaloTicket
+            );
+        }
+
+
+        intervaloTicket =
+            setInterval(
+                carregarMinhaConversa,
+                4000
+            );
+    }
+
+
+    function fecharMinhaConversa() {
+
+        const modal =
+            document.getElementById(
+                "modal-conversa"
+            );
+
+
+        if (modal) {
+
+            modal.style.display =
+                "none";
+        }
+
+
+        if (intervaloTicket) {
+
+            clearInterval(
+                intervaloTicket
+            );
+
+            intervaloTicket =
+                null;
+        }
+
+
+        document.body.classList.remove(
+            "modal-aberto"
+        );
+    }
+
+
+    async function carregarMinhaConversa() {
+
+        const salvo =
+            obterTicketSalvo();
+
+
+        if (
+            !salvo ||
+            !salvo.id ||
+            !salvo.token
+        ) {
+            return;
+        }
+
+
+        try {
+
+            const resposta =
+                await fetch(
+                    `/api/tickets/${encodeURIComponent(
+                        salvo.id
+                    )}?token=${encodeURIComponent(
+                        salvo.token
+                    )}`,
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+
+            if (!resposta.ok) {
+
+                if (
+                    resposta.status === 401 ||
+                    resposta.status === 403
+                ) {
+
+                    console.warn(
+                        "Token do ticket inválido."
+                    );
+                }
+
+                return;
+            }
+
+
+            const dados =
+                await resposta.json();
+
+
+            const ticket =
+                dados.ticket ||
+                dados;
+
+
+            /*
+             * IMPORTANTE:
+             * somente FECHADO libera a criação
+             * de um novo ticket.
+             *
+             * RESOLVIDO continua independente.
+             */
+
+            const statusTicket =
+                String(
+                    ticket.status ||
+                    dados.status ||
+                    ""
+                )
+                .trim()
+                .toLowerCase();
+
+
+            if (
+                statusTicket === "fechado"
+            ) {
+
+                localStorage.removeItem(
+                    TICKET_STORAGE_KEY
+                );
+
+
+                fecharMinhaConversa();
+
+
+                setTimeout(
+                    function() {
+
+                        alert(
+                            "🔒 Este ticket foi fechado pelo administrador.\n\n" +
+                            "Você pode criar um novo ticket para continuar o atendimento."
+                        );
+
+                    },
+                    100
+                );
+
+
+                return;
+            }
+
+
+            renderizarMinhaConversa(
+                ticket
+            );
+
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao carregar conversa:",
+                erro
+            );
+        }
+    }
+
+
+    function renderizarMinhaConversa(
+        ticket
+    ) {
+
+        const mensagens =
+            document.getElementById(
+                "conversa-mensagens"
+            );
+
+
+        const info =
+            document.getElementById(
+                "conversa-info"
+            );
+
+
+        if (!mensagens) {
+            return;
+        }
+
+
+        if (info) {
+
+            info.textContent =
+                `${ticket.assunto || "Atendimento"} • ${
+                    ticket.status || "ABERTO"
+                }`;
+        }
+
+
+        const lista =
+            ticket.mensagens ||
+            ticket.messages ||
+            [];
+
+
+        if (!lista.length) {
+
+            mensagens.innerHTML = `
+                <div class="conversation-empty">
+                    Nenhuma mensagem encontrada.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        mensagens.innerHTML =
+            lista.map(
+                mensagem => {
+
+                    const autor =
+                        mensagem.autor ||
+                        mensagem.remetente ||
+                        mensagem.tipo ||
+                        "suporte";
+
+
+                    const cliente =
+                        autor === "cliente" ||
+                        autor === "user";
+
+
+                    return `
+                        <div class="message ${
+                            cliente
+                                ? "message-client"
+                                : "message-support"
+                        }">
+
+                            <div class="message-top">
+
+                                <strong>
+                                    ${
+                                        cliente
+                                            ? "Você"
+                                            : "HYPE STORE"
+                                    }
+                                </strong>
+
+                                <span>
+                                    ${
+                                        formatarDataTicket(
+                                            mensagem.data ||
+                                            mensagem.createdAt ||
+                                            mensagem.criadoEm
+                                        )
+                                    }
+                                </span>
+
+                            </div>
+
+                            <p>
+                                ${
+                                    escaparHTML(
+                                        mensagem.mensagem ||
+                                        mensagem.texto ||
+                                        mensagem.content ||
+                                        ""
+                                    )
+                                }
+                            </p>
+
+                        </div>
+                    `;
+
+                }
+            ).join("");
+
+
+        mensagens.scrollTop =
+            mensagens.scrollHeight;
+    }
+
+
+    async function enviarMensagemTicket() {
+
+        const salvo =
+            obterTicketSalvo();
+
+
+        if (
+            !salvo ||
+            !salvo.id ||
+            !salvo.token
+        ) {
+
+            alert(
+                "Nenhum atendimento encontrado."
+            );
+
+            return;
+        }
+
+
+        const campo =
+            document.getElementById(
+                "conversa-texto"
+            );
+
+
+        if (!campo) {
+            return;
+        }
+
+
+        const mensagem =
+            campo.value.trim();
+
+
+        if (!mensagem) {
+            return;
+        }
+
+
+        const botao =
+            campo
+                .closest(
+                    ".conversation-input"
+                )
+                ?.querySelector(
+                    "button"
+                );
+
+
+        if (botao) {
+            botao.disabled = true;
+        }
+
+
+        try {
+
+            const resposta =
+                await fetch(
+                    `/api/tickets/${encodeURIComponent(
+                        salvo.id
+                    )}/mensagens`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                token:
+                                    salvo.token,
+
+                                mensagem
+                            })
+                    }
+                );
+
+
+            let dados = {};
+
+            try {
+
+                dados =
+                    await resposta.json();
+
+            } catch (erro) {
+
+                dados = {};
+            }
+
+
+            /*
+             * Caso o administrador tenha fechado
+             * o ticket enquanto o cliente estava
+             * com a conversa aberta.
+             */
+
+            if (
+                resposta.status === 409 &&
+                dados &&
+                dados.fechado
+            ) {
+
+                localStorage.removeItem(
+                    TICKET_STORAGE_KEY
+                );
+
+
+                fecharMinhaConversa();
+
+
+                alert(
+                    "🔒 Este ticket foi fechado pelo administrador.\n\n" +
+                    "Crie um novo ticket para continuar o atendimento."
+                );
+
+
+                return;
+            }
+
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.erro ||
+                    dados.message ||
+                    "Não foi possível enviar a mensagem."
+                );
+            }
+
+
+            campo.value = "";
+
+
+            await carregarMinhaConversa();
+
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao enviar mensagem:",
+                erro
+            );
+
+
+            alert(
+                erro.message ||
+                "Erro ao enviar mensagem."
+            );
+
+
+        } finally {
+
+            if (botao) {
+                botao.disabled = false;
+            }
+        }
+    }
+
+
+    /* =====================================================
+       FECHAR MODAIS
+    ===================================================== */
+
+    window.addEventListener(
+        "click",
+        event => {
+
+            const ids = [
+                "modal-ticket",
+                "modal-conversa"
+            ];
+
+
+            ids.forEach(
+                id => {
+
+                    const modal =
+                        document.getElementById(
+                            id
+                        );
+
+
+                    if (
+                        modal &&
+                        event.target === modal
+                    ) {
+
+                        if (
+                            id === "modal-ticket"
+                        ) {
+
+                            fecharTicket();
+
+                        } else {
+
+                            fecharMinhaConversa();
+
+                        }
+                    }
+
+                }
+            );
+        }
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key !== "Escape"
+            ) {
+                return;
+            }
+
+
+            fecharTicket();
+
+            fecharMinhaConversa();
+
+        }
+    );
+
+
+    /* =====================================================
+       INICIALIZAÇÃO
+    ===================================================== */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            const ano =
+                document.getElementById(
+                    "ano"
+                );
+
+
+            if (ano) {
+
+                ano.textContent =
+                    new Date().getFullYear();
+
+            }
+
+
+            const filtro =
+                document.getElementById(
+                    "filtro-categoria"
+                );
+
+
+            if (filtro) {
+
+                filtro.addEventListener(
+                    "change",
+                    filtrarCategoria
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================================
+       PESQUISA
+    ===================================================== */
+
+    function pesquisarProdutos() {
+
+        const campo =
+            document.getElementById(
+                "campo-pesquisa"
+            );
+
+
+        const termo =
+            campo
+                ? campo.value
+                    .toLowerCase()
+                    .trim()
+                : "";
+
+
+        const produtos =
+            document.querySelectorAll(
+                ".product-card"
+            );
+
+
+        let encontrados = 0;
+
+
+        produtos.forEach(
+            produto => {
+
+                const nome =
+                    (
+                        produto.dataset.produto ||
+                        produto.textContent
+                    )
+                    .toLowerCase();
+
+
+                const categoria =
+                    (
+                        produto.dataset.categoria ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                const filtro =
+                    document.getElementById(
+                        "filtro-categoria"
+                    )?.value ||
+                    "todos";
+
+
+                const correspondeBusca =
+                    !termo ||
+                    nome.includes(termo);
+
+
+                const correspondeCategoria =
+                    filtro === "todos" ||
+                    categoria === filtro;
+
+
+                const mostrar =
+                    correspondeBusca &&
+                    correspondeCategoria;
+
+
+                produto.style.display =
+                    mostrar
+                        ? ""
+                        : "none";
+
+
+                if (mostrar) {
+                    encontrados++;
+                }
+
+            }
+        );
+
+
+        const vazio =
+            document.getElementById(
+                "produtos-vazios"
+            );
+
+
+        if (vazio) {
+
+            vazio.style.display =
+                encontrados === 0
+                    ? "block"
+                    : "none";
+        }
+    }
+
+
+    function filtrarCategoria() {
+        pesquisarProdutos();
+    }
+
+</script>
+
+
+
+<!-- HYPE STORE - SUPORTE NO DISCORD -->
+<style id="hype-discord-support">
+.discord-support-tab {
+    margin-top: 24px;
+    padding: 22px;
+    border-radius: 18px;
+    background:
+        linear-gradient(145deg, rgba(88, 28, 135, 0.18), rgba(8, 7, 13, 0.92));
+    border: 1px solid rgba(168, 85, 247, 0.22);
+    box-shadow:
+        0 15px 45px rgba(0, 0, 0, 0.28),
+        inset 0 1px rgba(255, 255, 255, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.discord-support-tab::before {
+    content: "";
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    right: -45px;
+    top: -65px;
+    border: 1px solid rgba(168, 85, 247, 0.18);
+    transform: rotate(45deg);
+    pointer-events: none;
+}
+
+.discord-support-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    position: relative;
+    z-index: 1;
+}
+
+.discord-support-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.discord-support-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #5865f2, #7c3aed);
+    box-shadow: 0 8px 25px rgba(88, 101, 242, 0.28);
+    font-size: 25px;
+}
+
+.discord-support-text h3 {
+    margin: 0 0 5px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.discord-support-text p {
+    margin: 0;
+    color: #9994a8;
+    font-size: 12px;
+}
+
+.discord-support-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 175px;
+    padding: 13px 18px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #5865f2, #7c3aed);
+    color: #fff !important;
+    text-decoration: none !important;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 25px rgba(88, 101, 242, 0.18);
+    transition: 0.22s ease;
+}
+
+.discord-support-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: 0 14px 32px rgba(88, 101, 242, 0.30);
+}
+
+@media (max-width: 650px) {
+    .discord-support-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .discord-support-button {
+        width: 100%;
+    }
+}
+</style>
+
+<div class="discord-support-tab">
+    <div class="discord-support-content">
+        <div class="discord-support-info">
+            <div class="discord-support-icon">💬</div>
+
+            <div class="discord-support-text">
+                <h3>SUPORTE NO DISCORD</h3>
+                <p>Precisa de ajuda? Entre no nosso servidor.</p>
+            </div>
+        </div>
+
+        <a
+            class="discord-support-button"
+            href="https://discord.gg/hypen1tro"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            💜 ENTRAR NO DISCORD
+        </a>
+    </div>
+</div>
 </body>
-
 </html>

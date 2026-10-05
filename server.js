@@ -1,1539 +1,2321 @@
-require("dotenv").config();
 
 const express = require("express");
 const fs = require("fs");
+const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.static(__dirname));
+const PORT = process.env.PORT || 3000;
 
 const CAMINHO_PEDIDOS = "./pedidos.json";
 const CAMINHO_ESTOQUE = "./estoque.json";
+const CAMINHO_TICKETS = "./tickets.json";
+const CAMINHO_PRECOS = "./precos.json";
 
-const TURBOFY_API = "https://api.turbofypay.com";
+const TURBOFY_API =
+    process.env.TURBOFY_API || "https://api.turbofypay.com";
 
-const pedidosEmProcessamento = new Set();
+const TURBOFY_CLIENT_ID =
+    process.env.TURBOFY_CLIENT_ID ||
+    process.env.TURBOFY_CLIENTID ||
+    "";
 
+const TURBOFY_CLIENT_SECRET =
+    process.env.TURBOFY_CLIENT_SECRET ||
+    process.env.TURBOFY_CLIENTSECRET ||
+    "";
+const ADMIN_PASSWORD = "apenasth";
+const EMAIL_USUARIO = process.env.EMAIL_USUARIO || "";
+const EMAIL_SENHA_APP = process.env.EMAIL_SENHA_APP || "";
 
-// ==========================================
-// LER PEDIDOS
-// ==========================================
+/* =========================================================
+   MIDDLEWARE
+========================================================= */
 
-function lerPedidos() {
-    try {
-        if (!fs.existsSync(CAMINHO_PEDIDOS)) {
-            return [];
-        }
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-        const dados = fs.readFileSync(
-            CAMINHO_PEDIDOS,
-            "utf8"
-        );
+/*
+   BLOQUEIA ARQUIVOS PRIVADOS ANTES DO EXPRESS.STATIC
+*/
+app.use((req, res, next) => {
+    const caminho = String(req.path || "").toLowerCase();
 
-        if (!dados.trim()) {
-            return [];
-        }
+    const arquivosPrivados = [
+        "/tickets.json",
+        "/pedidos.json",
+        "/estoque.json",
+        "/.env"
+    ];
 
-        return JSON.parse(dados);
-
-    } catch (erro) {
-
-        console.error(
-            "ERRO AO LER PEDIDOS:",
-            erro
-        );
-
-        return [];
+    if (arquivosPrivados.includes(caminho)) {
+        return res.status(403).json({
+            sucesso: false,
+            erro: "Acesso não permitido."
+        });
     }
+
+    next();
+});
+
+app.use(express.static(__dirname));
+/* ===== BLOQUEIO FINAL - TICKET FECHADO ===== */
+app.use(async (req, res, next) => {
+    try {
+        if (req.method !== "POST") return next();
+
+        const match = req.path.match(/^\/api\/tickets\/([^\/]+)\/mensagens$/);
+        if (!match) return next();
+
+        const ticketId = decodeURIComponent(match[1]);
+        const dados = lerTickets();
+
+        const lista = Array.isArray(dados)
+            ? dados
+            : Array.isArray(dados?.tickets)
+                ? dados.tickets
+                : [];
+
+        const ticket = lista.find(t => String(t.id) === String(ticketId));
+
+        if (!ticket) return next();
+
+        const status = String(ticket.status || "")
+            .trim()
+            .toLowerCase();
+
+        if (
+            status === "resolvido" ||
+            status === "resolvida" ||
+            status === "fechado" ||
+            status === "fechada" ||
+            status === "closed"
+        ) {
+            return res.status(409).json({
+                sucesso: false,
+                fechado: true,
+                mensagem: "Este ticket foi fechado pelo administrador. Crie um novo ticket para continuar o atendimento."
+            });
+        }
+
+        next();
+    } catch (erro) {
+        console.error("Erro no bloqueio final do ticket:", erro);
+        next();
+    }
+});
+/* ===== FIM DO BLOQUEIO FINAL ===== */
+
+/* =========================================================
+   SESSÕES ADMIN
+========================================================= */
+
+const sessoesAdmin = new Map();
+
+const TEMPO_SESSAO = 12 * 60 * 60 * 1000;
+
+function gerarTokenSessao() {
+    return crypto.randomBytes(32).toString("hex");
 }
 
+/*
+   Extrai cookie manualmente.
+*/
+function obterCookie(req, nome) {
+    const cookies = req.headers.cookie;
 
-// ==========================================
-// SALVAR PEDIDOS
-// ==========================================
+    if (!cookies) return null;
 
-function salvarPedidos(pedidos) {
-    try {
+    const partes = cookies.split(";");
 
-        fs.writeFileSync(
-            CAMINHO_PEDIDOS,
-            JSON.stringify(
-                pedidos,
-                null,
-                2
-            ),
-            "utf8"
-        );
+    for (const parte of partes) {
+        const [chave, ...valor] = parte.trim().split("=");
 
-        return true;
+        if (chave === nome) {
+            return decodeURIComponent(valor.join("="));
+        }
+    }
 
-    } catch (erro) {
+    return null;
+}
 
-        console.error(
-            "ERRO AO SALVAR PEDIDOS:",
-            erro
-        );
+function autenticarAdmin(req, res, next) {
+    const token = obterCookie(req, "admin_token");
 
+    if (!token) {
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Não autenticado."
+        });
+    }
+
+    const sessao = sessoesAdmin.get(token);
+
+    if (!sessao) {
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Sessão inválida."
+        });
+    }
+
+    if (Date.now() > sessao.expiraEm) {
+        sessoesAdmin.delete(token);
+
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Sessão expirada."
+        });
+    }
+
+    next();
+}
+
+function verificarSessaoAdmin(req) {
+    const token = obterCookie(req, "admin_token");
+
+    if (!token) return false;
+
+    const sessao = sessoesAdmin.get(token);
+
+    if (!sessao) return false;
+
+    if (Date.now() > sessao.expiraEm) {
+        sessoesAdmin.delete(token);
         return false;
     }
+
+    return true;
 }
 
 
-// ==========================================
-// LER ESTOQUE
-// ==========================================
+function exigirSessaoAdmin(req, res, next) {
+    if (!verificarSessaoAdmin(req)) {
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Não autorizado."
+        });
+    }
 
-function lerEstoque() {
+    next();
+}
+/* =========================================================
+   ARQUIVOS JSON
+========================================================= */
 
+function lerJSON(caminho, valorPadrao) {
     try {
-
-        if (!fs.existsSync(CAMINHO_ESTOQUE)) {
-
-            console.error(
-                "ARQUIVO estoque.json NÃO ENCONTRADO."
-            );
-
-            return {};
-        }
-
-        const dados =
-            fs.readFileSync(
-                CAMINHO_ESTOQUE,
+        if (!fs.existsSync(caminho)) {
+            fs.writeFileSync(
+                caminho,
+                JSON.stringify(valorPadrao, null, 2),
                 "utf8"
             );
 
-        if (!dados.trim()) {
-            return {};
+            return valorPadrao;
         }
 
-        return JSON.parse(dados);
+        const conteudo = fs.readFileSync(caminho, "utf8").trim();
 
-    } catch (erro) {
+        if (!conteudo) {
+            fs.writeFileSync(
+                caminho,
+                JSON.stringify(valorPadrao, null, 2),
+                "utf8"
+            );
 
-        console.error(
-            "ERRO AO LER ESTOQUE:",
-            erro
-        );
-
-        return {};
-    }
-}
-
-
-// ==========================================
-// SALVAR ESTOQUE
-// ==========================================
-
-function salvarEstoque(estoque) {
-
-    try {
-
-        fs.writeFileSync(
-            CAMINHO_ESTOQUE,
-            JSON.stringify(
-                estoque,
-                null,
-                2
-            ),
-            "utf8"
-        );
-
-        return true;
-
-    } catch (erro) {
-
-        console.error(
-            "ERRO AO SALVAR ESTOQUE:",
-            erro
-        );
-
-        return false;
-    }
-}
-
-
-// ==========================================
-// IDENTIFICAR PRODUTO
-// ==========================================
-
-function obterDadosProduto(itens) {
-
-    const item =
-        Array.isArray(itens) &&
-        itens.length > 0
-            ? itens[0]
-            : {};
-
-    const nomeProduto =
-        String(
-            item.nome || ""
-        ).trim();
-
-    const opcao =
-        String(
-            item.opcao || ""
-        ).trim();
-
-    let chaveEstoque =
-        nomeProduto;
-
-    if (
-        nomeProduto.toLowerCase() ===
-        "nitro discord"
-    ) {
-
-        if (
-            opcao.toLowerCase() ===
-            "anual"
-        ) {
-
-            chaveEstoque =
-                "Nitro Discord Anual";
-
-        } else if (
-            opcao.toLowerCase() ===
-            "mensal"
-        ) {
-
-            chaveEstoque =
-                "Nitro Discord Mensal";
+            return valorPadrao;
         }
-    }
 
-    return {
-        nomeProduto,
-        opcao,
-        chaveEstoque
-    };
+        return JSON.parse(conteudo);
+    } catch (erro) {
+        console.error(`Erro ao ler ${caminho}:`, erro);
+
+        return valorPadrao;
+    }
 }
 
-
-// ==========================================
-// VERIFICAR ESTOQUE
-// ==========================================
-
-function existeEstoqueDisponivel(
-    chaveEstoque
-) {
-
-    const estoque =
-        lerEstoque();
-
-    if (
-        !estoque ||
-        !Array.isArray(
-            estoque[chaveEstoque]
-        )
-    ) {
-
-        return false;
-    }
-
-    return estoque[
-        chaveEstoque
-    ].some(
-        conta =>
-            conta &&
-            conta.status ===
-                "disponivel"
+function salvarJSON(caminho, dados) {
+    fs.writeFileSync(
+        caminho,
+        JSON.stringify(dados, null, 2),
+        "utf8"
     );
 }
 
+/* =========================================================
+   PEDIDOS
+========================================================= */
 
-// ==========================================
-// ENTREGAR PRODUTO
-// ==========================================
+function lerPedidos() {
+    const dados = lerJSON(CAMINHO_PEDIDOS, []);
 
-function entregarProduto(
-    pedido
-) {
-
-    const estoque =
-        lerEstoque();
-
-    const dadosProduto =
-        obterDadosProduto(
-            pedido.itens
-        );
-
-    const chaveEstoque =
-        pedido.chaveEstoque ||
-        dadosProduto.chaveEstoque;
+    if (Array.isArray(dados)) {
+        return dados;
+    }
 
     if (
-        !estoque ||
-        !Array.isArray(
-            estoque[chaveEstoque]
-        )
+        dados &&
+        Array.isArray(dados.pedidos)
     ) {
-
-        return {
-            sucesso: false,
-            erro:
-                `Estoque do produto "${chaveEstoque}" não encontrado.`
-        };
+        return dados.pedidos;
     }
 
-    const indice =
-        estoque[
-            chaveEstoque
-        ].findIndex(
-            conta =>
-                conta &&
-                conta.status ===
-                    "disponivel"
-        );
+    return [];
+}
+
+function salvarPedidos(pedidos) {
+    salvarJSON(
+        CAMINHO_PEDIDOS,
+        Array.isArray(pedidos) ? pedidos : []
+    );
+}
+
+function gerarIdPedido() {
+    return `PED-${Date.now()}-${crypto
+        .randomBytes(3)
+        .toString("hex")
+        .toUpperCase()}`;
+}
+
+function encontrarPedido(id) {
+    const pedidos = lerPedidos();
+
+    return pedidos.find(
+        pedido => String(pedido.id) === String(id)
+    );
+}
+
+function atualizarPedido(id, alteracoes) {
+    const pedidos = lerPedidos();
+
+    const indice = pedidos.findIndex(
+        pedido => String(pedido.id) === String(id)
+    );
 
     if (indice === -1) {
+        return null;
+    }
 
+    pedidos[indice] = {
+        ...pedidos[indice],
+        ...alteracoes
+    };
+
+    salvarPedidos(pedidos);
+
+    return pedidos[indice];
+}
+
+/* =========================================================
+   ESTOQUE
+========================================================= */
+
+function lerEstoque() {
+    const dados = lerJSON(CAMINHO_ESTOQUE, {
+        "Nitro Discord Mensal": [],
+        "Nitro Discord Anual": []
+    });
+
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
         return {
-            sucesso: false,
-            erro:
-                `Produto "${chaveEstoque}" está sem estoque.`
+            "Nitro Discord Mensal": [],
+            "Nitro Discord Anual": []
         };
     }
 
-    const conta =
-        estoque[
-            chaveEstoque
-        ][indice];
+    return dados;
+}
 
-    estoque[
-        chaveEstoque
-    ][indice].status =
-        "vendida";
+function salvarEstoque(estoque) {
+    salvarJSON(CAMINHO_ESTOQUE, estoque);
+}
 
-    estoque[
-        chaveEstoque
-    ][indice].vendidaEm =
-        new Date().toISOString();
+function obterDadosProduto(produto, opcao) {
+    const estoque = lerEstoque();
 
-    estoque[
-        chaveEstoque
-    ][indice].pedidoId =
-        pedido.id;
+    if (produto === "Nitro Discord") {
+        if (
+            String(opcao).toLowerCase() === "mensal"
+        ) {
+            return {
+                chave: "Nitro Discord Mensal",
+                itens: estoque["Nitro Discord Mensal"] || []
+            };
+        }
 
-    const salvo =
-        salvarEstoque(
-            estoque
-        );
+        if (
+            String(opcao).toLowerCase() === "anual"
+        ) {
+            return {
+                chave: "Nitro Discord Anual",
+                itens: estoque["Nitro Discord Anual"] || []
+            };
+        }
+    }
 
-    if (!salvo) {
-
+    if (estoque[produto]) {
         return {
-            sucesso: false,
-            erro:
-                "Não foi possível atualizar o estoque."
+            chave: produto,
+            itens: estoque[produto]
         };
     }
 
     return {
-        sucesso: true,
-        email:
-            conta.email ||
-            conta.login ||
-            "",
-        senha:
-            conta.senha ||
-            conta.password ||
-            ""
+        chave: produto,
+        itens: []
     };
 }
 
+function encontrarEstoqueDisponivel(produto, opcao) {
+    const dados = obterDadosProduto(produto, opcao);
 
-// ==========================================
-// EMAIL
-// ==========================================
-
-function criarTransportador() {
-
-    if (
-        !process.env.EMAIL_USUARIO ||
-        !process.env.EMAIL_SENHA_APP
-    ) {
-
-        console.error(
-            "EMAIL_USUARIO ou EMAIL_SENHA_APP não configurados."
+    const indice = dados.itens.findIndex(item => {
+        return (
+            !item.status ||
+            String(item.status).toLowerCase() === "disponivel"
         );
+    });
 
+    if (indice === -1) {
         return null;
     }
 
-    return nodemailer.createTransport({
+    return {
+        chave: dados.chave,
+        indice,
+        item: dados.itens[indice]
+    };
+}
+
+function entregarProduto(pedido) {
+    const estoque = lerEstoque();
+
+    const dados = obterDadosProduto(
+        pedido.produto,
+        pedido.opcao
+    );
+
+    if (!estoque[dados.chave]) {
+        return {
+            sucesso: false,
+            erro: "Produto não encontrado no estoque."
+        };
+    }
+
+    const indice = estoque[dados.chave].findIndex(item => {
+        return (
+            !item.status ||
+            String(item.status).toLowerCase() === "disponivel"
+        );
+    });
+
+    if (indice === -1) {
+        return {
+            sucesso: false,
+            erro: "Produto sem estoque."
+        };
+    }
+
+    const item = estoque[dados.chave][indice];
+
+    estoque[dados.chave][indice] = {
+        ...item,
+        status: "vendida",
+        vendidaEm: new Date().toISOString(),
+        pedidoId: pedido.id
+    };
+
+    salvarEstoque(estoque);
+
+    return {
+        sucesso: true,
+        dados: item
+    };
+}
+
+/* =========================================================
+   E-MAIL
+========================================================= */
+
+let transporter = null;
+
+if (EMAIL_USUARIO && EMAIL_SENHA_APP) {
+    transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-            user:
-                process.env.EMAIL_USUARIO,
-            pass:
-                process.env.EMAIL_SENHA_APP
+            user: EMAIL_USUARIO,
+            pass: EMAIL_SENHA_APP
         }
     });
 }
 
-
-// ==========================================
-// ENVIAR PRODUTO POR EMAIL
-// ==========================================
-
-async function enviarEmailProduto(
-    pedido,
-    entrega
-) {
-
-    const transporter =
-        criarTransportador();
-
+async function enviarEmailEntrega(pedido, dadosProduto) {
     if (!transporter) {
-        return false;
+        throw new Error("E-mail não configurado.");
     }
 
-    const texto = `
-Olá!
+    const destinatario = pedido.email;
 
-Seu pagamento foi confirmado com sucesso.
+    if (!destinatario) {
+        throw new Error("Pedido sem e-mail.");
+    }
 
-PEDIDO:
-${pedido.id}
+    const emailProduto =
+        dadosProduto.email ||
+        dadosProduto.usuario ||
+        "";
 
-PRODUTO:
-${pedido.produto || "Produto digital"}
+    const senhaProduto =
+        dadosProduto.senha ||
+        "";
 
-${pedido.opcao ? `OPÇÃO:\n${pedido.opcao}\n` : ""}
+    const html = `
+        <div style="font-family:Arial,sans-serif;background:#111;color:#fff;padding:30px">
+            <div style="max-width:600px;margin:auto;background:#1a1a1a;padding:30px;border-radius:15px">
+                <h1 style="color:#9b59ff">HYPE STORE</h1>
 
-DADOS DE ACESSO:
+                <h2>Pagamento aprovado!</h2>
 
-E-mail/Login:
-${entrega.email}
+                <p>Olá!</p>
 
-Senha:
-${entrega.senha}
+                <p>
+                    Seu pedido <strong>${pedido.id}</strong> foi aprovado.
+                </p>
 
-Obrigado por comprar na HYPE STORE!
-`;
+                <hr style="border-color:#333">
+
+                <h3>Produto</h3>
+
+                <p>
+                    <strong>${pedido.produto}</strong>
+                    ${pedido.opcao ? `- ${pedido.opcao}` : ""}
+                </p>
+
+                <h3>Dados da conta</h3>
+
+                <div style="background:#0d0d0d;padding:20px;border-radius:10px">
+                    <p>
+                        <strong>E-mail/Usuário:</strong><br>
+                        ${emailProduto || "Não informado"}
+                    </p>
+
+                    <p>
+                        <strong>Senha:</strong><br>
+                        ${senhaProduto || "Não informada"}
+                    </p>
+                </div>
+
+                <br>
+
+                <p>
+                    Obrigado por comprar na HYPE STORE!
+                </p>
+            </div>
+        </div>
+    `;
+
+    await transporter.sendMail({
+        from: `"HYPE STORE" <${EMAIL_USUARIO}>`,
+        to: destinatario,
+        subject: `HYPE STORE - Pedido ${pedido.id} aprovado`,
+        html
+    });
+}
+
+/* =========================================================
+   ENTREGA AUTOMÁTICA
+========================================================= */
+
+const pedidosEmProcessamento = new Set();
+
+async function processarPedidoPago(pedido) {
+    if (!pedido) return;
+
+    if (pedido.statusPagamento !== "PAID") {
+        return;
+    }
+
+    if (
+        pedido.entregue === true &&
+        pedido.emailEnviado === true
+    ) {
+        return;
+    }
+
+    if (pedidosEmProcessamento.has(pedido.id)) {
+        return;
+    }
+
+    pedidosEmProcessamento.add(pedido.id);
 
     try {
+        let pedidoAtual = encontrarPedido(pedido.id);
 
-        await transporter.sendMail({
+        if (!pedidoAtual) {
+            return;
+        }
 
-            from:
-                `"HYPE STORE" <${process.env.EMAIL_USUARIO}>`,
+        let dadosEntrega = null;
 
-            to:
-                pedido.email,
+        if (!pedidoAtual.entregue) {
+            const entrega = entregarProduto(pedidoAtual);
 
-            subject:
-                `HYPE STORE - Pedido ${pedido.id} aprovado`,
+            if (!entrega.sucesso) {
+                atualizarPedido(pedidoAtual.id, {
+                    status: "PAGO_SEM_ESTOQUE",
+                    erroEntrega: entrega.erro
+                });
 
-            text:
-                texto
-        });
+                console.error(
+                    `Pedido ${pedidoAtual.id}:`,
+                    entrega.erro
+                );
 
-        console.log(
-            "E-MAIL ENVIADO PARA:",
-            pedido.email
-        );
+                return;
+            }
 
-        return true;
+            dadosEntrega = entrega.dados;
 
-    } catch (erro) {
+            pedidoAtual = atualizarPedido(
+                pedidoAtual.id,
+                {
+                    entregue: true,
+                    status: "PAGO"
+                }
+            );
+        } else {
+            dadosEntrega = pedidoAtual.dadosEntrega || null;
+        }
 
-        console.error(
-            "ERRO AO ENVIAR E-MAIL:",
-            erro
-        );
+        if (
+            dadosEntrega &&
+            !pedidoAtual.dadosEntrega
+        ) {
+            pedidoAtual = atualizarPedido(
+                pedidoAtual.id,
+                {
+                    dadosEntrega
+                }
+            );
+        }
 
-        return false;
+        if (
+            !pedidoAtual.emailEnviado &&
+            dadosEntrega
+        ) {
+            try {
+                await enviarEmailEntrega(
+                    pedidoAtual,
+                    dadosEntrega
+                );
+
+                atualizarPedido(
+                    pedidoAtual.id,
+                    {
+                        emailEnviado: true,
+                        emailEnviadoEm: new Date().toISOString(),
+                        status: "ENTREGUE"
+                    }
+                );
+
+                console.log(
+                    `Pedido ${pedidoAtual.id}: entrega enviada por e-mail.`
+                );
+            } catch (erroEmail) {
+                console.error(
+                    `Erro ao enviar e-mail do pedido ${pedidoAtual.id}:`,
+                    erroEmail.message
+                );
+
+                atualizarPedido(
+                    pedidoAtual.id,
+                    {
+                        erroEmail: erroEmail.message,
+                        status: "PAGO_ENTREGA_PENDENTE"
+                    }
+                );
+            }
+        }
+    } finally {
+        pedidosEmProcessamento.delete(pedido.id);
     }
 }
 
+/* =========================================================
+   STATUS
+========================================================= */
 
-// ==========================================
-// STATUS DO SERVIDOR
-// ==========================================
+app.get("/api/status", (req, res) => {
+    res.json({
+        online: true,
+        mensagem: "Servidor da HYPE STORE funcionando!",
+        turbofy: TURBOFY_API,
+        estoque: CAMINHO_ESTOQUE,
+        pedidos: CAMINHO_PEDIDOS,
+        tickets: CAMINHO_TICKETS
+    });
+});
 
-app.get(
-    "/api/status",
-    (req, res) => {
+/* =========================================================
+   ESTOQUE API
+========================================================= */
 
-        res.json({
-            online: true,
-            mensagem:
-                "Servidor da HYPE STORE funcionando!"
-        });
-    }
-);
+app.get("/api/estoque/:produto", (req, res) => {
+    const produto = decodeURIComponent(req.params.produto);
 
+    const estoque = lerEstoque();
 
-// ==========================================
-// CONSULTAR ESTOQUE
-// ==========================================
+    const itens = estoque[produto] || [];
 
-app.get(
-    "/api/estoque/:produto",
-    (req, res) => {
+    const disponiveis = itens.filter(item => {
+        return (
+            !item.status ||
+            String(item.status).toLowerCase() === "disponivel"
+        );
+    });
 
-        const produto =
-            decodeURIComponent(
-                req.params.produto
-            );
+    res.json({
+        sucesso: true,
+        produto,
+        estoque: disponiveis.length
+    });
+});
 
-        const disponivel =
-            existeEstoqueDisponivel(
-                produto
-            );
+/* =========================================================
+   PEDIDOS
+========================================================= */
 
-        res.json({
+app.post("/api/pedidos", (req, res) => {
+    try {
+        const {
+            nome,
+            email,
+            discord,
             produto,
-            disponivel
-        });
-    }
-);
+            opcao,
+            valor
+        } = req.body || {};
 
-
-// ==========================================
-// CONSULTAR PEDIDO
-// ==========================================
-
-app.get(
-    "/api/pedidos/:id",
-    (req, res) => {
-
-        const pedidos =
-            lerPedidos();
-
-        const pedido =
-            pedidos.find(
-                item =>
-                    String(item.id) ===
-                    String(req.params.id)
-            );
-
-        if (!pedido) {
-
-            return res.status(404).json({
+        if (!email) {
+            return res.status(400).json({
                 sucesso: false,
-                erro:
-                    "Pedido não encontrado."
+                erro: "E-mail é obrigatório."
             });
         }
+
+        if (!produto) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Produto é obrigatório."
+            });
+        }
+
+        const pedido = {
+            id: gerarIdPedido(),
+            nome: nome || "",
+            email,
+            discord: discord || "",
+            produto,
+            opcao: opcao || "",
+            valor: Number(valor) || 0,
+            status: "AGUARDANDO_PAGAMENTO",
+            statusPagamento: "PENDING",
+            criadoEm: new Date().toISOString(),
+            atualizadoEm: new Date().toISOString(),
+            entregue: false,
+            emailEnviado: false
+        };
+
+        const pedidos = lerPedidos();
+
+        pedidos.push(pedido);
+
+        salvarPedidos(pedidos);
 
         res.json({
             sucesso: true,
             pedido
         });
+    } catch (erro) {
+        console.error(
+            "Erro ao criar pedido:",
+            erro
+        );
+
+        res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno ao criar pedido."
+        });
     }
-);
+});
 
+app.get("/api/pedidos/:id", (req, res) => {
+    const pedido = encontrarPedido(req.params.id);
 
-// ==========================================
-// CRIAR PEDIDO
-// ==========================================
+    if (!pedido) {
+        return res.status(404).json({
+            sucesso: false,
+            erro: "Pedido não encontrado."
+        });
+    }
 
-app.post(
-    "/api/pedidos",
-    (req, res) => {
+    res.json({
+        sucesso: true,
+        pedido
+    });
+});
 
-        try {
+/* =========================================================
+   TURBOFYPAY - CRIAR PIX
+========================================================= */
 
-            const {
-                nome,
-                discord,
-                email,
-                itens
-            } = req.body;
+app.post("/api/pagamento/pix", async (req, res) => {
+    try {
+        const {
+            pedidoId,
+            valor,
+            produto,
+            opcao
+        } = req.body || {};
 
-            if (
-                !nome ||
-                !discord ||
-                !email ||
-                !Array.isArray(itens) ||
-                itens.length === 0
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Dados do pedido incompletos."
-                });
-            }
-
-            const dadosProduto =
-                obterDadosProduto(
-                    itens
-                );
-
-            const id =
-                `HYPE-${Date.now()}`;
-
-            const pedidos =
-                lerPedidos();
-
-            const pedido = {
-
-                id,
-
-                nome,
-
-                discord,
-
-                email,
-
-                itens,
-
-                produto:
-                    dadosProduto.nomeProduto,
-
-                opcao:
-                    dadosProduto.opcao,
-
-                chaveEstoque:
-                    dadosProduto.chaveEstoque,
-
-                status:
-                    "AGUARDANDO PAGAMENTO",
-
-                criadoEm:
-                    new Date().toISOString()
-            };
-
-            pedidos.push(
-                pedido
-            );
-
-            salvarPedidos(
-                pedidos
-            );
-
-            res.json({
-                sucesso: true,
-                pedidoId: id
-            });
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO AO CRIAR PEDIDO:",
-                erro
-            );
-
-            res.status(500).json({
+        if (!pedidoId) {
+            return res.status(400).json({
                 sucesso: false,
-                erro:
-                    "Erro interno ao criar pedido."
+                erro: "pedidoId é obrigatório."
             });
         }
-    }
-);
 
+        if (
+            !TURBOFY_CLIENT_ID ||
+            !TURBOFY_CLIENT_SECRET
+        ) {
+            return res.status(500).json({
+                sucesso: false,
+                erro: "Credenciais da TurbofyPay não configuradas."
+            });
+        }
 
-// ==========================================
-// GERAR PIX TURBOFYPAY
-// ==========================================
+        const valorNumerico = Number(valor);
 
-app.post(
-    "/api/pagamento/pix",
-    async (req, res) => {
+        if (!Number.isFinite(valorNumerico)) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Valor inválido."
+            });
+        }
+
+        if (valorNumerico < 1.5) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "O valor mínimo do pagamento é R$ 1,50"
+            });
+        }
+
+        const pedido = encontrarPedido(pedidoId);
+
+        if (!pedido) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: "Pedido não encontrado."
+            });
+        }
+
+        const amountCents = Math.round(
+            valorNumerico * 100
+        );
+
+        const idempotencyKey =
+            `${pedidoId}-${Date.now()}`;
+
+        const resposta = await fetch(
+            `${TURBOFY_API}/sellers/pix`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-client-id": TURBOFY_CLIENT_ID,
+                    "x-client-secret": TURBOFY_CLIENT_SECRET,
+                    "x-idempotency-key": idempotencyKey
+                },
+
+                body: JSON.stringify({
+                    amountCents,
+
+                    description:
+                        `Pedido ${pedidoId} - ${produto || pedido.produto} ${opcao || pedido.opcao || ""}`,
+
+                    externalRef: pedidoId,
+
+                    metadata: {
+                        pedidoId,
+                        produto: produto || pedido.produto,
+                        opcao: opcao || pedido.opcao || ""
+                    }
+                })
+            }
+        );
+
+        const texto = await resposta.text();
+
+        let dados;
 
         try {
-
-            const {
-                nome,
-                discord,
-                email,
-                itens,
-                valor
-            } = req.body;
-
-            if (
-                !nome ||
-                !discord ||
-                !email ||
-                !Array.isArray(itens) ||
-                itens.length === 0 ||
-                !valor
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Dados do pagamento incompletos."
-                });
-            }
-
-            const valorNumerico =
-                Number(valor);
-
-            if (
-                !Number.isFinite(
-                    valorNumerico
-                ) ||
-                valorNumerico < 1.50
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "O valor mínimo do pagamento é R$ 1,50."
-                });
-            }
-
-
-            // ==========================================
-            // PRODUTO
-            // ==========================================
-
-            const dadosProduto =
-                obterDadosProduto(
-                    itens
-                );
-
-
-            // ==========================================
-            // DIAGNÓSTICO DO ESTOQUE
-            // ==========================================
-
-            console.log("");
-            console.log(
-                "=========================================="
-            );
-            console.log(
-                "       DIAGNÓSTICO DO ESTOQUE"
-            );
-            console.log(
-                "=========================================="
-            );
-
-            console.log(
-                "ITENS RECEBIDOS:",
-                JSON.stringify(
-                    itens,
-                    null,
-                    2
-                )
-            );
-
-            console.log(
-                "NOME DO PRODUTO:",
-                dadosProduto.nomeProduto
-            );
-
-            console.log(
-                "OPÇÃO:",
-                dadosProduto.opcao
-            );
-
-            console.log(
-                "CHAVE DO ESTOQUE:",
-                dadosProduto.chaveEstoque
-            );
-
-            console.log(
-                "ESTOQUE DISPONÍVEL:",
-                existeEstoqueDisponivel(
-                    dadosProduto.chaveEstoque
-                )
-            );
-
-            console.log(
-                "=========================================="
-            );
-            console.log("");
-
-
-            if (
-                !dadosProduto.nomeProduto
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        "Produto não informado."
-                });
-            }
-
-
-            // ==========================================
-            // VERIFICAR ESTOQUE
-            // ==========================================
-
-            if (
-                !existeEstoqueDisponivel(
-                    dadosProduto.chaveEstoque
-                )
-            ) {
-
-                return res.status(400).json({
-                    sucesso: false,
-                    erro:
-                        `O produto "${dadosProduto.chaveEstoque}" está sem estoque.`
-                });
-            }
-
-
-            // ==========================================
-            // CRIAR PEDIDO
-            // ==========================================
-
-            const pedidoId =
-                `HYPE-${Date.now()}`;
-
-            const pedidos =
-                lerPedidos();
-
-            const novoPedido = {
-
-                id:
-                    pedidoId,
-
-                nome,
-
-                discord,
-
-                email,
-
-                itens,
-
-                produto:
-                    dadosProduto.nomeProduto,
-
-                opcao:
-                    dadosProduto.opcao,
-
-                chaveEstoque:
-                    dadosProduto.chaveEstoque,
-
-                valor:
-                    valorNumerico,
-
-                status:
-                    "AGUARDANDO PAGAMENTO",
-
-                criadoEm:
-                    new Date().toISOString()
+            dados = JSON.parse(texto);
+        } catch {
+            dados = {
+                raw: texto
             };
+        }
 
-            pedidos.push(
-                novoPedido
-            );
-
-            salvarPedidos(
-                pedidos
-            );
-
-
-            // ==========================================
-            // VALOR EM CENTAVOS
-            // ==========================================
-
-            const amountCents =
-                Math.round(
-                    valorNumerico * 100
-                );
-
-
-            // ==========================================
-            // TURBOFYPAY
-            // ==========================================
-
-            console.log("");
-            console.log(
-                "=========================================="
-            );
-            console.log(
-                "       GERANDO PIX TURBOFYPAY"
-            );
-            console.log(
-                "=========================================="
-            );
-            console.log(
-                "PEDIDO:",
-                pedidoId
-            );
-            console.log(
-                "VALOR:",
-                valorNumerico
-            );
-            console.log(
-                "CENTAVOS:",
-                amountCents
-            );
-            console.log(
-                "=========================================="
-            );
-
-
-            const resposta =
-                await fetch(
-                    `${TURBOFY_API}/sellers/pix`,
-                    {
-                        method: "POST",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json",
-
-                            "x-client-id":
-                                process.env.TURBOFY_CLIENT_ID,
-
-                            "x-client-secret":
-                                process.env.TURBOFY_CLIENT_SECRET,
-
-                            "x-idempotency-key":
-                                pedidoId
-                        },
-
-                        body:
-                            JSON.stringify({
-
-                                amountCents,
-
-                                description:
-                                    `Pedido ${pedidoId} - ${dadosProduto.nomeProduto}${dadosProduto.opcao ? ` ${dadosProduto.opcao}` : ""}`,
-
-                                externalRef:
-                                    pedidoId,
-
-                                metadata: {
-
-                                    pedidoId,
-
-                                    produto:
-                                        dadosProduto.nomeProduto,
-
-                                    opcao:
-                                        dadosProduto.opcao
-                                }
-                            })
-                    }
-                );
-
-
-            const dados =
-                await resposta.json();
-
-
-            console.log(
-                "RESPOSTA TURBOFYPAY:",
-                JSON.stringify(
-                    dados,
-                    null,
-                    2
-                )
-            );
-
-
-            // ==========================================
-            // ERRO TURBOFYPAY
-            // ==========================================
-
-            if (!resposta.ok) {
-
-                console.error(
-                    "ERRO TURBOFYPAY:",
-                    dados
-                );
-
-                return res.status(
-                    resposta.status
-                ).json({
-
-                    sucesso: false,
-
-                    erro:
-                        dados.message ||
-                        dados.error ||
-                        "Erro ao criar cobrança PIX."
-                });
-            }
-
-
-            // ==========================================
-            // VERIFICAR SE O PIX FOI GERADO
-            // ==========================================
-
-            if (
-                !dados?.pix?.qrCode &&
-                !dados?.pix?.copyPaste
-            ) {
-
-                console.error(
-                    "TURBOFYPAY NÃO RETORNOU QR CODE OU PIX COPIA E COLA."
-                );
-
-                return res.status(502).json({
-
-                    sucesso: false,
-
-                    erro:
-                        "A cobrança foi criada, mas a TurbofyPay não retornou os dados do PIX."
-                });
-            }
-
-
-            // ==========================================
-            // SALVAR DADOS DO PAGAMENTO
-            // ==========================================
-
-            const pedidosAtualizados =
-                lerPedidos();
-
-            const indicePedido =
-                pedidosAtualizados.findIndex(
-                    pedido =>
-                        pedido.id ===
-                        pedidoId
-                );
-
-            if (
-                indicePedido !== -1
-            ) {
-
-                pedidosAtualizados[
-                    indicePedido
-                ].chargeId =
-                    dados.id;
-
-                pedidosAtualizados[
-                    indicePedido
-                ].statusPagamento =
-                    dados.status ||
-                    "PENDING";
-
-                pedidosAtualizados[
-                    indicePedido
-                ].pix =
-                    dados;
-
-                salvarPedidos(
-                    pedidosAtualizados
-                );
-            }
-
-
-            // ==========================================
-            // RESPOSTA PARA O SITE
-            // ==========================================
-
-            return res.json({
-
-                sucesso: true,
-
-                pedidoId,
-
-                chargeId:
-                    dados.id,
-
-                qrCode:
-                    dados?.pix?.qrCode ||
-                    dados?.pix?.qr_code ||
-                    "",
-
-                copyPaste:
-                    dados?.pix?.copyPaste ||
-                    dados?.pix?.copy_paste ||
-                    "",
-
-                status:
-                    dados.status ||
-                    "PENDING"
-            });
-
-
-        } catch (erro) {
-
+        if (!resposta.ok) {
             console.error(
-                "ERRO AO GERAR PIX:",
-                erro
+                "Erro TurbofyPay:",
+                resposta.status,
+                dados
+            );
+
+            return res.status(resposta.status).json({
+                sucesso: false,
+                erro:
+                    dados?.message ||
+                    dados?.error ||
+                    "Erro ao criar pagamento.",
+                detalhes: dados
+            });
+        }
+
+        const chargeId =
+            dados.chargeId ||
+            dados.id ||
+            dados.charge?.id ||
+            dados.data?.chargeId ||
+            dados.data?.id;
+
+        const copyPaste =
+            dados.pix?.copyPaste ||
+            dados.copyPaste ||
+            dados.pixCopyPaste ||
+            dados.data?.pix?.copyPaste ||
+            "";
+
+        const expiresAt =
+            dados.expiresAt ||
+            dados.pix?.expiresAt ||
+            dados.data?.expiresAt ||
+            null;
+
+        if (!chargeId) {
+            console.error(
+                "TurbofyPay não retornou chargeId:",
+                dados
             );
 
             return res.status(500).json({
-
                 sucesso: false,
-
-                erro:
-                    erro.message ||
-                    "Erro interno ao gerar PIX."
+                erro: "A TurbofyPay não retornou o ID da cobrança.",
+                detalhes: dados
             });
         }
+
+        atualizarPedido(
+            pedidoId,
+            {
+                chargeId,
+                copyPaste,
+                expiresAt,
+                valor: valorNumerico,
+                statusPagamento: "PENDING",
+                status: "AGUARDANDO_PAGAMENTO",
+                atualizadoEm: new Date().toISOString()
+            }
+        );
+
+        res.json({
+            sucesso: true,
+            pedidoId,
+            chargeId,
+            copyPaste,
+            expiresAt,
+            status: "PENDING"
+        });
+    } catch (erro) {
+        console.error(
+            "Erro ao criar PIX:",
+            erro
+        );
+
+        res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno ao criar pagamento PIX.",
+            detalhes: erro.message
+        });
     }
-);
+});
 
-
-// ==========================================
-// VERIFICAR STATUS DO PIX
-// ==========================================
+/* =========================================================
+   TURBOFYPAY - CONSULTAR PAGAMENTO
+========================================================= */
 
 app.get(
     "/api/pagamento/status/:chargeId",
     async (req, res) => {
-
-        const chargeId =
-            req.params.chargeId;
-
         try {
+            const chargeId = req.params.chargeId;
 
-            const resposta =
-                await fetch(
-                    `${TURBOFY_API}/sellers/pix/${chargeId}`,
-                    {
-                        method: "GET",
-
-                        headers: {
-
-                            "x-client-id":
-                                process.env.TURBOFY_CLIENT_ID,
-
-                            "x-client-secret":
-                                process.env.TURBOFY_CLIENT_SECRET
-                        }
-                    }
-                );
-
-
-            const dados =
-                await resposta.json();
-
-
-            console.log(
-                "STATUS TURBOFYPAY:",
-                JSON.stringify(
-                    dados,
-                    null,
-                    2
-                )
-            );
-
-
-            if (!resposta.ok) {
-
-                return res.status(
-                    resposta.status
-                ).json({
-
+            if (
+                !TURBOFY_CLIENT_ID ||
+                !TURBOFY_CLIENT_SECRET
+            ) {
+                return res.status(500).json({
                     sucesso: false,
-
-                    erro:
-                        dados.message ||
-                        dados.error ||
-                        "Erro ao consultar pagamento."
+                    erro: "Credenciais da TurbofyPay não configuradas."
                 });
             }
 
+            const resposta = await fetch(
+                `${TURBOFY_API}/sellers/pix/${encodeURIComponent(chargeId)}`,
+                {
+                    method: "GET",
 
-            const status =
-                String(
-                    dados.status ||
-                    ""
-                ).toUpperCase();
-
-
-            const pedidos =
-                lerPedidos();
-
-
-            const indicePedido =
-                pedidos.findIndex(
-                    pedido =>
-                        pedido.chargeId ===
-                        chargeId
-                );
-
-
-            if (
-                indicePedido === -1
-            ) {
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status,
-
-                    chargeId,
-
-                    mensagem:
-                        "Pagamento consultado, mas pedido não encontrado."
-                });
-            }
-
-
-            const pedido =
-                pedidos[
-                    indicePedido
-                ];
-
-
-            // ==========================================
-            // PAGAMENTO AINDA NÃO FOI PAGO
-            // ==========================================
-
-            if (
-                status !== "PAID"
-            ) {
-
-                pedido.statusPagamento =
-                    status;
-
-                salvarPedidos(
-                    pedidos
-                );
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status,
-
-                    chargeId
-                });
-            }
-
-
-            // ==========================================
-            // EVITAR PROCESSAMENTO DUPLICADO
-            // ==========================================
-
-            if (
-                pedidosEmProcessamento.has(
-                    pedido.id
-                )
-            ) {
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status: "PAID",
-
-                    chargeId,
-
-                    processando: true
-                });
-            }
-
-
-            pedidosEmProcessamento.add(
-                pedido.id
+                    headers: {
+                        "x-client-id": TURBOFY_CLIENT_ID,
+                        "x-client-secret": TURBOFY_CLIENT_SECRET
+                    }
+                }
             );
 
+            const texto = await resposta.text();
+
+            let dados;
 
             try {
-
-                pedido.statusPagamento =
-                    "PAID";
-
-                pedido.status =
-                    "PAGO";
-
-
-                // ==========================================
-                // CASO JÁ TENHA SIDO ENTREGUE
-                // ==========================================
-
-                if (
-                    pedido.contaEntregue
-                ) {
-
-                    let emailEnviado =
-                        pedido.emailEnviado ||
-                        false;
-
-
-                    if (
-                        !emailEnviado
-                    ) {
-
-                        const entrega = {
-
-                            email:
-                                pedido.contaEmail ||
-                                "",
-
-                            senha:
-                                pedido.contaSenha ||
-                                ""
-                        };
-
-
-                        emailEnviado =
-                            await enviarEmailProduto(
-                                pedido,
-                                entrega
-                            );
-
-
-                        pedido.emailEnviado =
-                            emailEnviado;
-
-                        pedido.emailEnviadoEm =
-                            emailEnviado
-                                ? new Date().toISOString()
-                                : null;
-                    }
-
-
-                    salvarPedidos(
-                        pedidos
-                    );
-
-
-                    return res.json({
-
-                        sucesso: true,
-
-                        status: "PAID",
-
-                        chargeId,
-
-                        entregue: true,
-
-                        emailEnviado,
-
-                        conta: {
-
-                            email:
-                                pedido.contaEmail,
-
-                            senha:
-                                pedido.contaSenha
-                        }
-                    });
-                }
-
-
-                // ==========================================
-                // ENTREGAR CONTA
-                // ==========================================
-
-                const entrega =
-                    entregarProduto(
-                        pedido
-                    );
-
-
-                if (
-                    !entrega.sucesso
-                ) {
-
-                    pedido.erroEntrega =
-                        entrega.erro;
-
-                    salvarPedidos(
-                        pedidos
-                    );
-
-                    return res.status(500).json({
-
-                        sucesso: false,
-
-                        status: "PAID",
-
-                        chargeId,
-
-                        erro:
-                            entrega.erro
-                    });
-                }
-
-
-                // ==========================================
-                // SALVAR CONTA NO PEDIDO
-                // ==========================================
-
-                pedido.contaEntregue =
-                    true;
-
-                pedido.contaEmail =
-                    entrega.email;
-
-                pedido.contaSenha =
-                    entrega.senha;
-
-                pedido.entregueEm =
-                    new Date().toISOString();
-
-
-                // ==========================================
-                // ENVIAR EMAIL
-                // ==========================================
-
-                const emailEnviado =
-                    await enviarEmailProduto(
-                        pedido,
-                        entrega
-                    );
-
-                pedido.emailEnviado =
-                    emailEnviado;
-
-                pedido.emailEnviadoEm =
-                    emailEnviado
-                        ? new Date().toISOString()
-                        : null;
-
-
-                salvarPedidos(
-                    pedidos
-                );
-
-
-                return res.json({
-
-                    sucesso: true,
-
-                    status: "PAID",
-
-                    chargeId,
-
-                    entregue: true,
-
-                    emailEnviado,
-
-                    conta: {
-
-                        email:
-                            entrega.email,
-
-                        senha:
-                            entrega.senha
-                    }
-                });
-
-
-            } finally {
-
-                pedidosEmProcessamento.delete(
-                    pedido.id
-                );
+                dados = JSON.parse(texto);
+            } catch {
+                dados = {
+                    raw: texto
+                };
             }
 
+            if (!resposta.ok) {
+                return res.status(resposta.status).json({
+                    sucesso: false,
+                    erro:
+                        dados?.message ||
+                        dados?.error ||
+                        "Erro ao consultar pagamento.",
+                    detalhes: dados
+                });
+            }
 
-        } catch (erro) {
+            const status = String(
+                dados.status ||
+                dados.data?.status ||
+                dados.charge?.status ||
+                ""
+            ).toUpperCase();
 
-            console.error(
-                "ERRO AO CONSULTAR PAGAMENTO:",
-                erro
+            const pedido = lerPedidos().find(
+                item =>
+                    String(item.chargeId) ===
+                    String(chargeId)
             );
 
-            return res.status(500).json({
+            if (pedido) {
+                if (status === "PAID") {
+                    atualizarPedido(
+                        pedido.id,
+                        {
+                            statusPagamento: "PAID",
+                            status: "PAGO",
+                            atualizadoEm:
+                                new Date().toISOString()
+                        }
+                    );
 
-                sucesso: false,
+                    const pedidoAtualizado =
+                        encontrarPedido(pedido.id);
 
-                erro:
-                    erro.message ||
-                    "Erro ao consultar pagamento."
-            });
-        }
-    }
-);
-
-
-// ==========================================
-// TESTE DE EMAIL
-// ==========================================
-
-app.get(
-    "/teste-email",
-    async (req, res) => {
-
-        try {
-
-            const transporter =
-                criarTransportador();
-
-            if (!transporter) {
-
-                return res.status(500).json({
-
-                    sucesso: false,
-
-                    erro:
-                        "E-mail não configurado."
-                });
+                    await processarPedidoPago(
+                        pedidoAtualizado
+                    );
+                } else {
+                    atualizarPedido(
+                        pedido.id,
+                        {
+                            statusPagamento:
+                                status || "PENDING",
+                            atualizadoEm:
+                                new Date().toISOString()
+                        }
+                    );
+                }
             }
 
-
-            await transporter.sendMail({
-
-                from:
-                    `"HYPE STORE" <${process.env.EMAIL_USUARIO}>`,
-
-                to:
-                    process.env.EMAIL_USUARIO,
-
-                subject:
-                    "Teste HYPE STORE",
-
-                text:
-                    "Teste de envio de e-mail da HYPE STORE funcionando."
-            });
-
+            const pedidoFinal =
+                pedido
+                    ? encontrarPedido(pedido.id)
+                    : null;
 
             res.json({
-
                 sucesso: true,
-
-                mensagem:
-                    "E-mail de teste enviado."
+                chargeId,
+                status,
+                pedidoId: pedidoFinal?.id || null,
+                pedido: pedidoFinal || null,
+                dados
             });
-
-
         } catch (erro) {
-
             console.error(
-                "ERRO NO TESTE DE EMAIL:",
+                "Erro ao consultar PIX:",
                 erro
             );
 
             res.status(500).json({
-
                 sucesso: false,
-
-                erro:
-                    erro.message
+                erro: "Erro interno ao consultar pagamento.",
+                detalhes: erro.message
             });
         }
     }
 );
 
+/* =========================================================
+   MONITORAMENTO AUTOMÁTICO DOS PEDIDOS
+========================================================= */
 
-// ==========================================
-// INICIAR SERVIDOR
-// ==========================================
+async function verificarPagamentosAutomaticamente() {
+    try {
+        const pedidos = lerPedidos();
 
-app.listen(
-    PORT,
-    () => {
+        for (const pedido of pedidos) {
+            if (
+                !pedido.chargeId ||
+                pedido.statusPagamento === "PAID"
+            ) {
+                continue;
+            }
 
-        console.log("");
-        console.log(
-            "=========================================="
+            try {
+                const resposta = await fetch(
+                    `${TURBOFY_API}/sellers/pix/${encodeURIComponent(pedido.chargeId)}`,
+                    {
+                        method: "GET",
+
+                        headers: {
+                            "x-client-id": TURBOFY_CLIENT_ID,
+                            "x-client-secret": TURBOFY_CLIENT_SECRET
+                        }
+                    }
+                );
+
+                if (!resposta.ok) {
+                    continue;
+                }
+
+                const dados = await resposta.json();
+
+                const status = String(
+                    dados.status ||
+                    dados.data?.status ||
+                    dados.charge?.status ||
+                    ""
+                ).toUpperCase();
+
+                if (!status) {
+                    continue;
+                }
+
+                if (status === "PAID") {
+                    atualizarPedido(
+                        pedido.id,
+                        {
+                            statusPagamento: "PAID",
+                            status: "PAGO",
+                            atualizadoEm:
+                                new Date().toISOString()
+                        }
+                    );
+
+                    await processarPedidoPago(
+                        encontrarPedido(pedido.id)
+                    );
+                } else {
+                    atualizarPedido(
+                        pedido.id,
+                        {
+                            statusPagamento: status,
+                            atualizadoEm:
+                                new Date().toISOString()
+                        }
+                    );
+                }
+            } catch (erro) {
+                console.error(
+                    `Erro verificando pedido ${pedido.id}:`,
+                    erro.message
+                );
+            }
+        }
+    } catch (erro) {
+        console.error(
+            "Erro no monitoramento:",
+            erro
         );
-        console.log(
-            "          HYPE STORE ONLINE"
+    }
+}
+
+setInterval(
+    verificarPagamentosAutomaticamente,
+    10000
+);
+
+/* =========================================================
+   ADMIN - LOGIN
+========================================================= */
+
+app.post("/api/admin/login", (req, res) => {
+    try {
+        const { senha } = req.body || {};
+
+        if (!ADMIN_PASSWORD) {
+            return res.status(500).json({
+                sucesso: false,
+                erro: "Senha administrativa não configurada."
+            });
+        }
+
+        if (
+            typeof senha !== "string" ||
+            senha !== ADMIN_PASSWORD
+        ) {
+            return res.status(401).json({
+                sucesso: false,
+                erro: "Senha incorreta."
+            });
+        }
+
+        const token = gerarTokenSessao();
+
+        sessoesAdmin.set(token, {
+            criadoEm: Date.now(),
+            expiraEm: Date.now() + TEMPO_SESSAO
+        });
+
+        res.setHeader(
+            "Set-Cookie",
+            [
+                `admin_token=${encodeURIComponent(token)}`,
+                "HttpOnly",
+                "Path=/",
+                "SameSite=Lax",
+                `Max-Age=${Math.floor(TEMPO_SESSAO / 1000)}`
+            ].join("; ")
         );
-        console.log(
-            "=========================================="
+
+        res.json({
+            sucesso: true,
+            mensagem: "Login realizado."
+        });
+    } catch (erro) {
+        console.error(
+            "Erro login admin:",
+            erro
         );
-        console.log(
-            `PORTA: ${PORT}`
+
+        res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno."
+        });
+    }
+});
+
+app.post("/api/admin/logout", (req, res) => {
+    const token = obterCookie(
+        req,
+        "admin_token"
+    );
+
+    if (token) {
+        sessoesAdmin.delete(token);
+    }
+
+    res.setHeader(
+        "Set-Cookie",
+        [
+            "admin_token=",
+            "HttpOnly",
+            "Path=/",
+            "SameSite=Lax",
+            "Max-Age=0"
+        ].join("; ")
+    );
+
+    res.json({
+        sucesso: true
+    });
+});
+
+app.get("/api/admin/me", (req, res) => {
+    const autenticado =
+        verificarSessaoAdmin(req);
+
+    res.json({
+        autenticado
+    });
+});
+
+/* =========================================================
+   TICKETS
+========================================================= */
+
+/*
+   O tickets.json usa:
+
+   {
+       "tickets": []
+   }
+
+   A função abaixo converte isso para o array
+   utilizado pelas rotas.
+*/
+function lerPrecos() {
+    const padrao = {
+        "Nitro Discord Mensal": 5.00,
+        "Nitro Discord Anual": 40.00
+    };
+
+    const dados = lerJSON(CAMINHO_PRECOS, padrao);
+
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
+        return padrao;
+    }
+
+    const mensal = Number(dados["Nitro Discord Mensal"]);
+    const anual = Number(dados["Nitro Discord Anual"]);
+
+    return {
+        "Nitro Discord Mensal": Number.isFinite(mensal) && mensal > 0 ? mensal : 5.00,
+        "Nitro Discord Anual": Number.isFinite(anual) && anual > 0 ? anual : 40.00
+    };
+}
+
+function salvarPrecos(precos) {
+    salvarJSON(CAMINHO_PRECOS, precos);
+}
+
+function normalizarProdutoEstoque(produto) {
+    const p = String(produto || "").trim().toLowerCase();
+
+    if (["mensal", "nitro mensal", "nitro discord mensal"].includes(p)) {
+        return "Nitro Discord Mensal";
+    }
+
+    if (["anual", "nitro anual", "nitro discord anual"].includes(p)) {
+        return "Nitro Discord Anual";
+    }
+
+    return null;
+}
+
+function gerarIdEstoque() {
+    return "STK-" + Date.now().toString(36) + "-" + crypto.randomBytes(3).toString("hex");
+}
+function lerTickets() {
+    const dados = lerJSON(CAMINHO_TICKETS, {
+        tickets: []
+    });
+
+    /*
+       Formato atual:
+       {
+           "tickets": []
+       }
+    */
+    if (
+        dados &&
+        !Array.isArray(dados) &&
+        Array.isArray(dados.tickets)
+    ) {
+        return dados.tickets;
+    }
+
+    /*
+       Compatibilidade com formato antigo:
+       [...]
+    */
+    if (Array.isArray(dados)) {
+        return dados;
+    }
+
+    return [];
+}
+
+/*
+   Salva sempre no formato:
+
+   {
+       "tickets": []
+   }
+*/
+function salvarTickets(tickets) {
+    salvarJSON(CAMINHO_TICKETS, {
+        tickets: Array.isArray(tickets)
+            ? tickets
+            : []
+    });
+}
+
+function gerarIdTicket() {
+    return `TICKET-${Math.floor(
+        1000 + Math.random() * 9000
+    )}`;
+}
+
+function gerarTokenTicket() {
+    return crypto
+        .randomBytes(32)
+        .toString("hex");
+}
+
+/*
+   Remove o token antes de enviar
+   para cliente/admin.
+*/
+function prepararTicketPublico(ticket) {
+    if (!ticket) return null;
+
+    const copia = {
+        ...ticket
+    };
+
+    delete copia.token;
+
+    return copia;
+}
+
+function impedirCachePrivado(res) {
+    res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, private"
+    );
+
+    res.setHeader(
+        "Pragma",
+        "no-cache"
+    );
+
+    res.setHeader(
+        "Expires",
+        "0"
+    );
+}
+
+/* =========================================================
+   CRIAR TICKET
+========================================================= */
+
+app.post("/api/tickets", (req, res) => {
+    try {
+        const {
+            nome,
+            email,
+            discord,
+            assunto,
+            mensagem
+        } = req.body || {};
+
+        if (!nome || !email || !mensagem) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Nome, e-mail e mensagem são obrigatórios."
+            });
+        }
+
+        const tickets = lerTickets();
+
+        let id = gerarIdTicket();
+
+        /*
+           Evita ID duplicado.
+        */
+        while (
+            tickets.some(
+                ticket => String(ticket.id) === String(id)
+            )
+        ) {
+            id = gerarIdTicket();
+        }
+
+        const token = gerarTokenTicket();
+
+        const agora =
+            new Date().toISOString();
+
+        const ticket = {
+            id,
+            token,
+
+            nome: String(nome).trim(),
+            email: String(email).trim(),
+            discord: String(discord || "").trim(),
+            assunto: String(
+                assunto || "Suporte"
+            ).trim(),
+
+            status: "ABERTO",
+
+            criadoEm: agora,
+            atualizadoEm: agora,
+
+            mensagens: [
+                {
+                    id: crypto
+                        .randomBytes(8)
+                        .toString("hex"),
+
+                    autor: "cliente",
+
+                    texto: String(
+                        mensagem
+                    ).trim(),
+
+                    criadoEm: agora
+                }
+            ]
+        };
+
+        tickets.push(ticket);
+
+        salvarTickets(tickets);
+
+        /*
+           O TOKEN É ENTREGUE SOMENTE AQUI.
+        */
+        res.json({
+            sucesso: true,
+
+            ticket: {
+                id: ticket.id,
+                token: ticket.token,
+                status: ticket.status,
+                criadoEm: ticket.criadoEm
+            }
+        });
+    } catch (erro) {
+        console.error(
+            "Erro ao criar ticket:",
+            erro
         );
-        console.log(
-            "PIX TURBOFYPAY ATIVO"
-        );
-        console.log(
-            "ESTOQUE AUTOMÁTICO ATIVO"
-        );
-        console.log(
-            "E-MAIL AUTOMÁTICO ATIVO"
-        );
-        console.log(
-            "=========================================="
-        );
-        console.log("");
+
+        res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno ao criar ticket.",
+            detalhes: erro.message
+        });
+    }
+});
+
+/* =========================================================
+   CLIENTE - CONSULTAR TICKET
+========================================================= */
+
+app.get(
+    "/api/tickets/:id",
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const id = String(
+                req.params.id || ""
+            ).trim();
+
+            const token = String(
+                req.query.token || ""
+            ).trim();
+
+            if (!token) {
+                return res.status(401).json({
+                    sucesso: false,
+                    erro: "Token do ticket não informado."
+                });
+            }
+
+            const tickets = lerTickets();
+
+            const ticket = tickets.find(
+                item => String(item.id) === id
+            );
+
+            if (!ticket) {
+                return res.status(404).json({
+                    sucesso: false,
+                    erro: "Ticket não encontrado."
+                });
+            }
+
+            if (
+                !ticket.token ||
+                ticket.token !== token
+            ) {
+                return res.status(401).json({
+                    sucesso: false,
+                    erro: "Acesso negado."
+                });
+            }
+
+            res.json({
+                sucesso: true,
+                ticket: prepararTicketPublico(ticket)
+            });
+        } catch (erro) {
+            console.error(
+                "Erro ao consultar ticket:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: "Erro interno ao consultar ticket."
+            });
+        }
     }
 );
+
+/* =========================================================
+   CLIENTE - ENVIAR MENSAGEM
+========================================================= */
+
+/* ===== BLOQUEIO DE TICKET FECHADO ===== */
+app.use((req, res, next) => {
+    if (req.method === "POST" && req.path.match(/^\/api\/tickets\/[^\/]+\/mensagens$/)) {
+        try {
+            const id = String(req.path.split("/")[3] || "").trim();
+            const tickets = lerTickets();
+            const ticket = tickets.find(item => String(item.id) === id);
+
+            if (ticket && String(ticket.status || "").trim().toLowerCase() === "fechado") {
+                return res.status(409).json({
+                    sucesso: false,
+                    fechado: true,
+                    mensagem: "Este ticket está fechado. Abra um novo ticket para continuar o atendimento."
+                });
+            }
+        } catch (erro) {
+            console.error("Erro ao verificar ticket fechado:", erro);
+        }
+    }
+
+    next();
+});
+/* ===== FIM DO BLOQUEIO ===== */
+app.post(
+    "/api/tickets/:id/mensagens",
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const id = String(
+                req.params.id || ""
+            ).trim();
+
+            const {
+                token,
+                texto,
+                mensagem
+            } = req.body || {};
+
+            const textoFinal =
+                texto || mensagem || "";
+
+            if (!token) {
+                return res.status(401).json({
+                    sucesso: false,
+                    erro: "Token do ticket não informado."
+                });
+            }
+
+            if (
+                !textoFinal ||
+                !String(textoFinal).trim()
+            ) {
+                return res.status(400).json({
+                    sucesso: false,
+                    erro: "Mensagem vazia."
+                });
+            }
+
+            const tickets = lerTickets();
+
+            const indice = tickets.findIndex(
+                item => String(item.id) === id
+            );
+
+            if (indice === -1) {
+                return res.status(404).json({
+                    sucesso: false,
+                    erro: "Ticket não encontrado."
+                });
+            }
+
+            const ticket = tickets[indice];
+
+            if (
+                !ticket.token ||
+                ticket.token !== String(token).trim()
+            ) {
+                return res.status(401).json({
+                    sucesso: false,
+                    erro: "Acesso negado."
+                });
+            }
+
+            const agora =
+                new Date().toISOString();
+
+            ticket.mensagens =
+                Array.isArray(ticket.mensagens)
+                    ? ticket.mensagens
+                    : [];
+
+            ticket.mensagens.push({
+                id: crypto
+                    .randomBytes(8)
+                    .toString("hex"),
+
+                autor: "cliente",
+
+                texto: String(
+                    textoFinal
+                ).trim(),
+
+                criadoEm: agora
+            });
+
+            if (
+                ticket.status === "RESOLVIDO" ||
+                ticket.status === "FECHADO"
+            ) {
+                ticket.status = "ABERTO";
+            }
+
+            ticket.atualizadoEm = agora;
+
+            tickets[indice] = ticket;
+
+            salvarTickets(tickets);
+
+            res.json({
+                sucesso: true,
+                ticket: prepararTicketPublico(ticket)
+            });
+        } catch (erro) {
+            console.error(
+                "Erro ao enviar mensagem:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: "Erro interno.",
+                detalhes: erro.message
+            });
+        }
+    }
+);
+
+/* =========================================================
+   ADMIN - LISTAR TICKETS
+========================================================= */
+
+app.get(
+    "/api/admin/tickets",
+    autenticarAdmin,
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const tickets = lerTickets();
+
+            const lista = tickets.filter(ticket => String(ticket.status || "").trim().toLowerCase() !== "fechado").map(ticket => ({
+                id: ticket.id,
+                nome: ticket.nome,
+                email: ticket.email,
+                discord: ticket.discord,
+                assunto: ticket.assunto,
+                status: ticket.status,
+                criadoEm: ticket.criadoEm,
+                atualizadoEm: ticket.atualizadoEm,
+
+                mensagens:
+                    Array.isArray(ticket.mensagens)
+                        ? ticket.mensagens.length
+                        : 0
+            }));
+
+            res.json({
+                sucesso: true,
+                tickets: lista
+            });
+        } catch (erro) {
+            console.error(
+                "Erro ao listar tickets:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: "Erro interno ao listar tickets."
+            });
+        }
+    }
+);
+
+/* =========================================================
+   ADMIN - ABRIR TICKET
+========================================================= */
+
+app.get(
+    "/api/admin/tickets/:id",
+    autenticarAdmin,
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const id = String(
+                req.params.id || ""
+            ).trim();
+
+            const tickets = lerTickets();
+
+            const ticket = tickets.find(
+                item => String(item.id) === id
+            );
+
+            if (!ticket) {
+                return res.status(404).json({
+                    sucesso: false,
+                    erro: "Ticket não encontrado."
+                });
+            }
+
+            res.json({
+                sucesso: true,
+                ticket: prepararTicketPublico(ticket)
+            });
+        } catch (erro) {
+            console.error(
+                "Erro ao abrir ticket:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: "Erro interno ao abrir ticket."
+            });
+        }
+    }
+);
+
+/* =========================================================
+   ADMIN - RESPONDER TICKET
+========================================================= */
+
+function responderTicketComoAdmin(req, res) {
+    impedirCachePrivado(res);
+
+    try {
+        const id = String(
+            req.params.id || ""
+        ).trim();
+
+        const {
+            texto,
+            mensagem
+        } = req.body || {};
+
+        const textoFinal =
+            texto || mensagem || "";
+
+        if (
+            !textoFinal ||
+            !String(textoFinal).trim()
+        ) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Mensagem vazia."
+            });
+        }
+
+        const tickets = lerTickets();
+
+        const indice = tickets.findIndex(
+            item => String(item.id) === id
+        );
+
+        if (indice === -1) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: "Ticket não encontrado."
+            });
+        }
+
+        const ticket = tickets[indice];
+
+        const agora =
+            new Date().toISOString();
+
+        ticket.mensagens =
+            Array.isArray(ticket.mensagens)
+                ? ticket.mensagens
+                : [];
+
+        ticket.mensagens.push({
+            id: crypto
+                .randomBytes(8)
+                .toString("hex"),
+
+            autor: "admin",
+
+            texto: String(
+                textoFinal
+            ).trim(),
+
+            criadoEm: agora
+        });
+
+        ticket.atualizadoEm = agora;
+
+        if (
+            ticket.status === "FECHADO"
+        ) {
+            ticket.status = "ABERTO";
+        }
+
+        tickets[indice] = ticket;
+
+        salvarTickets(tickets);
+
+        res.json({
+            sucesso: true,
+            ticket: prepararTicketPublico(ticket)
+        });
+    } catch (erro) {
+        console.error(
+            "Erro ao responder ticket:",
+            erro
+        );
+
+        res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno.",
+            detalhes: erro.message
+        });
+    }
+}
+
+app.post(
+    "/api/admin/tickets/:id/respostas",
+    autenticarAdmin,
+    responderTicketComoAdmin
+);
+
+/*
+   Compatibilidade com versões do admin.html
+   que utilizem /mensagens.
+*/
+app.post(
+    "/api/admin/tickets/:id/mensagens",
+    autenticarAdmin,
+    responderTicketComoAdmin
+);
+
+/* =========================================================
+   ADMIN - ALTERAR STATUS
+========================================================= */
+
+
+/* =========================================================
+   ADMIN - FECHAR TICKET
+   Fechamento independente de "Resolvido"
+========================================================= */
+app.patch(
+    "/api/admin/tickets/:id/fechar",
+    autenticarAdmin,
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const id = String(req.params.id || "").trim();
+            const tickets = lerTickets();
+
+            const ticket = tickets.find(
+                item => String(item.id) === id
+            );
+
+            if (!ticket) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Ticket não encontrado."
+                });
+            }
+
+            ticket.status = "fechado";
+            ticket.atualizadoEm = new Date().toISOString();
+
+            salvarTickets(tickets);
+
+            return res.json({
+                sucesso: true,
+                fechado: true,
+                mensagem: "Ticket fechado com sucesso.",
+                ticket
+            });
+
+        } catch (erro) {
+            console.error("Erro ao fechar ticket:", erro);
+
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro interno ao fechar o ticket."
+            });
+        }
+    }
+);
+app.patch(
+    "/api/admin/tickets/:id/status",
+    autenticarAdmin,
+    (req, res) => {
+        impedirCachePrivado(res);
+
+        try {
+            const id = String(
+                req.params.id || ""
+            ).trim();
+
+            const {
+                status
+            } = req.body || {};
+
+            const statusNormalizado =
+                String(
+                    status || ""
+                ).toUpperCase();
+
+            const statusPermitidos = [
+                "ABERTO",
+                "EM_ATENDIMENTO",
+                "RESOLVIDO",
+                "FECHADO"
+            ];
+
+            if (
+                !statusPermitidos.includes(
+                    statusNormalizado
+                )
+            ) {
+                return res.status(400).json({
+                    sucesso: false,
+                    erro: "Status inválido."
+                });
+            }
+
+            const tickets = lerTickets();
+
+            const indice = tickets.findIndex(
+                item => String(item.id) === id
+            );
+
+            if (indice === -1) {
+                return res.status(404).json({
+                    sucesso: false,
+                    erro: "Ticket não encontrado."
+                });
+            }
+
+            tickets[indice].status =
+                statusNormalizado;
+
+            tickets[indice].atualizadoEm =
+                new Date().toISOString();
+
+            salvarTickets(tickets);
+
+            res.json({
+                sucesso: true,
+                ticket: prepararTicketPublico(
+                    tickets[indice]
+                )
+            });
+        } catch (erro) {
+            console.error(
+                "Erro ao alterar status:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: "Erro interno.",
+                detalhes: erro.message
+            });
+        }
+    }
+);
+
+/* =========================================================
+   TESTE DE E-MAIL
+========================================================= */
+
+app.get(
+    "/teste-email",
+    async (req, res) => {
+        try {
+            if (!transporter) {
+                return res.status(500).json({
+                    sucesso: false,
+                    erro: "E-mail não configurado."
+                });
+            }
+
+            await transporter.sendMail({
+                from: `"HYPE STORE" <${EMAIL_USUARIO}>`,
+                to: EMAIL_USUARIO,
+                subject: "HYPE STORE - Teste de e-mail",
+                text: "Teste de envio de e-mail da HYPE STORE."
+            });
+
+            res.json({
+                sucesso: true,
+                mensagem: "E-mail de teste enviado."
+            });
+        } catch (erro) {
+            console.error(
+                "Erro teste e-mail:",
+                erro
+            );
+
+            res.status(500).json({
+                sucesso: false,
+                erro: erro.message
+            });
+        }
+    }
+);
+
+/* =========================================================
+   GARANTIR ARQUIVOS
+========================================================= */
+
+function garantirArquivos() {
+    if (!fs.existsSync(CAMINHO_PEDIDOS)) {
+        salvarPedidos([]);
+    }
+
+    if (!fs.existsSync(CAMINHO_TICKETS)) {
+        salvarTickets([]);
+    } else {
+        /*
+           Corrige automaticamente tickets.json caso
+           esteja vazio ou em formato incompatível.
+        */
+        const dados = lerJSON(
+            CAMINHO_TICKETS,
+            {
+                tickets: []
+            }
+        );
+
+        if (
+            !Array.isArray(dados) &&
+            !(
+                dados &&
+                Array.isArray(dados.tickets)
+            )
+        ) {
+            salvarTickets([]);
+        } else if (Array.isArray(dados)) {
+            /*
+               Converte formato antigo para o atual.
+            */
+            salvarTickets(dados);
+        }
+    }
+
+    if (!fs.existsSync(CAMINHO_ESTOQUE)) {
+        salvarEstoque({
+            "Nitro Discord Mensal": [],
+            "Nitro Discord Anual": []
+        });
+    }
+}
+
+garantirArquivos();
+
+/* =========================================================
+   INICIAR SERVIDOR
+========================================================= */
+
+
+app.get("/api/precos", (req, res) => {
+    const precos = lerPrecos();
+    res.json({
+        sucesso: true,
+        mensal: precos["Nitro Discord Mensal"],
+        anual: precos["Nitro Discord Anual"]
+    });
+});
+
+app.get("/api/admin/precos", exigirSessaoAdmin, (req, res) => {
+    const precos = lerPrecos();
+    res.json({
+        sucesso: true,
+        mensal: precos["Nitro Discord Mensal"],
+        anual: precos["Nitro Discord Anual"]
+    });
+});
+
+app.put("/api/admin/precos", exigirSessaoAdmin, (req, res) => {
+    const mensal = Number(req.body.mensal);
+    const anual = Number(req.body.anual);
+
+    if (!Number.isFinite(mensal) || mensal <= 0 || !Number.isFinite(anual) || anual <= 0) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Informe preços válidos."
+        });
+    }
+
+    salvarPrecos({
+        "Nitro Discord Mensal": mensal,
+        "Nitro Discord Anual": anual
+    });
+
+    res.json({
+        sucesso: true,
+        mensal,
+        anual
+    });
+});
+
+app.get("/api/admin/estoque", exigirSessaoAdmin, (req, res) => {
+    const estoque = lerEstoque();
+
+    res.json({
+        sucesso: true,
+        mensal: estoque["Nitro Discord Mensal"] || [],
+        anual: estoque["Nitro Discord Anual"] || []
+    });
+});
+
+app.post("/api/admin/estoque", exigirSessaoAdmin, (req, res) => {
+    const produto = normalizarProdutoEstoque(req.body.produto);
+    const email = String(req.body.email || "").trim();
+    const senha = String(req.body.senha || "").trim();
+
+    if (!produto) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Produto inválido."
+        });
+    }
+
+    if (!email || !senha) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Email e senha são obrigatórios."
+        });
+    }
+
+    const estoque = lerEstoque();
+
+    if (!Array.isArray(estoque[produto])) {
+        estoque[produto] = [];
+    }
+
+    estoque[produto].push({
+        id: gerarIdEstoque(),
+        email,
+        senha,
+        status: "disponivel",
+        criadoEm: new Date().toISOString()
+    });
+
+    salvarEstoque(estoque);
+
+    res.json({
+        sucesso: true,
+        mensagem: "Conta adicionada ao estoque."
+    });
+});
+
+app.delete("/api/admin/estoque/:produto/:id", exigirSessaoAdmin, (req, res) => {
+    const produto = normalizarProdutoEstoque(req.params.produto);
+    const id = String(req.params.id || "");
+
+    if (!produto) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Produto inválido."
+        });
+    }
+
+    const estoque = lerEstoque();
+    const lista = Array.isArray(estoque[produto]) ? estoque[produto] : [];
+
+    const indice = lista.findIndex(item =>
+        String(item.id || "") === id &&
+        String(item.status || "disponivel").toLowerCase() === "disponivel"
+    );
+
+    if (indice === -1) {
+        return res.status(404).json({
+            sucesso: false,
+            erro: "Conta disponível não encontrada."
+        });
+    }
+
+    lista.splice(indice, 1);
+    estoque[produto] = lista;
+
+    salvarEstoque(estoque);
+
+    res.json({
+        sucesso: true,
+        mensagem: "Conta removida do estoque."
+    });
+});
+app.listen(PORT, () => {
+    console.log("");
+    console.log("======================================");
+    console.log("       HYPE STORE - SERVIDOR");
+    console.log("======================================");
+    console.log(
+        `Servidor da HYPE STORE funcionando na porta ${PORT}`
+    );
+    console.log(
+        `TurbofyPay: ${TURBOFY_API}`
+    );
+    console.log(
+        `Estoque: ${CAMINHO_ESTOQUE}`
+    );
+    console.log(
+        `Pedidos: ${CAMINHO_PEDIDOS}`
+    );
+    console.log(
+        `Tickets: ${CAMINHO_TICKETS}`
+    );
+    console.log(
+        `E-mail configurado: ${transporter ? "SIM" : "NÃO"}`
+    );
+    console.log(
+        `Admin configurado: ${ADMIN_PASSWORD ? "SIM" : "NÃO"}`
+    );
+    console.log("======================================");
+    console.log("");
+});
+
+
+
+
+
