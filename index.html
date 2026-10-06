@@ -10626,3 +10626,261 @@ a {
 
 })();
 </script>
+<style id="HYPE-CORRECAO-ATENDIMENTO-CELULAR">
+#hype-chat-cliente-final-window {
+    z-index: 2147483646 !important;
+}
+#hype-chat-cliente-final-button {
+    z-index: 2147483647 !important;
+}
+</style>
+
+<script id="HYPE-CORRECAO-ATENDIMENTO-CELULAR-JS">
+(function () {
+    "use strict";
+
+    const STORAGE_KEY = "hype_store_ticket";
+
+    function obterTicketSalvo() {
+        try {
+            const bruto = localStorage.getItem(STORAGE_KEY);
+            if (!bruto) return null;
+
+            const dados = JSON.parse(bruto);
+
+            if (
+                dados &&
+                dados.id &&
+                dados.token
+            ) {
+                return {
+                    id: String(dados.id),
+                    token: String(dados.token)
+                };
+            }
+        } catch (e) {
+            console.warn("[HYPE] Erro ao ler atendimento salvo:", e);
+        }
+
+        return null;
+    }
+
+    function salvarTicket(id, token) {
+        if (!id || !token) return;
+
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+                id: String(id),
+                token: String(token)
+            })
+        );
+    }
+
+    async function corrigirBuscaDoTicket() {
+        const salvo = obterTicketSalvo();
+
+        if (!salvo) {
+            console.log("[HYPE] Nenhum atendimento salvo neste aparelho.");
+            return null;
+        }
+
+        try {
+            const resposta = await fetch(
+                "/api/tickets/" +
+                encodeURIComponent(salvo.id) +
+                "?token=" +
+                encodeURIComponent(salvo.token),
+                {
+                    method: "GET",
+                    cache: "no-store",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            const bruto = await resposta.text();
+
+            let dados;
+
+            try {
+                dados = JSON.parse(bruto);
+            } catch (e) {
+                console.error("[HYPE] Resposta inválida do servidor:", bruto);
+                return null;
+            }
+
+            if (!resposta.ok) {
+                console.warn(
+                    "[HYPE] Atendimento não encontrado:",
+                    resposta.status,
+                    dados
+                );
+                return null;
+            }
+
+            const ticket = dados.ticket || dados;
+
+            if (!ticket || !ticket.id) {
+                console.warn("[HYPE] Servidor não retornou um ticket válido.");
+                return null;
+            }
+
+            salvarTicket(
+                ticket.id,
+                ticket.token || salvo.token
+            );
+
+            console.log("[HYPE] Atendimento recuperado:", ticket.id);
+
+            return ticket;
+
+        } catch (erro) {
+            console.error("[HYPE] Erro ao recuperar atendimento:", erro);
+            return null;
+        }
+    }
+
+    window.hypeRecuperarAtendimento = corrigirBuscaDoTicket;
+
+    /*
+     * Corrige o envio para usar exatamente o ID/token
+     * armazenados neste aparelho.
+     */
+    window.hypeEnviarMensagemCelular = async function (texto) {
+        texto = String(texto || "").trim();
+
+        if (!texto) {
+            return {
+                sucesso: false,
+                mensagem: "Digite uma mensagem."
+            };
+        }
+
+        let salvo = obterTicketSalvo();
+
+        /*
+         * Se já existe atendimento, confirma primeiro
+         * que ele ainda existe.
+         */
+        if (salvo) {
+            const ticketAtual = await corrigirBuscaDoTicket();
+
+            if (!ticketAtual) {
+                /*
+                 * Não apagamos imediatamente o ticket.
+                 * Tentamos enviar usando os dados salvos.
+                 */
+                console.warn(
+                    "[HYPE] Não foi possível validar o ticket. Tentando envio."
+                );
+            }
+        }
+
+        salvo = obterTicketSalvo();
+
+        if (!salvo) {
+            return {
+                sucesso: false,
+                atendimentoNaoEncontrado: true,
+                mensagem: "Nenhum atendimento encontrado neste aparelho."
+            };
+        }
+
+        try {
+            const resposta = await fetch(
+                "/api/tickets/" +
+                encodeURIComponent(salvo.id) +
+                "/mensagens",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        token: salvo.token,
+                        texto: texto,
+                        mensagem: texto
+                    })
+                }
+            );
+
+            const bruto = await resposta.text();
+
+            let dados;
+
+            try {
+                dados = JSON.parse(bruto);
+            } catch (e) {
+                return {
+                    sucesso: false,
+                    mensagem: "O servidor retornou uma resposta inválida."
+                };
+            }
+
+            if (!resposta.ok) {
+                console.warn(
+                    "[HYPE] Falha ao enviar:",
+                    resposta.status,
+                    dados
+                );
+
+                return {
+                    sucesso: false,
+                    atendimentoNaoEncontrado:
+                        resposta.status === 404 ||
+                        resposta.status === 401 ||
+                        resposta.status === 403,
+                    mensagem:
+                        dados.mensagem ||
+                        "Não foi possível enviar a mensagem."
+                };
+            }
+
+            const ticket = dados.ticket || dados;
+
+            if (ticket && ticket.id) {
+                salvarTicket(
+                    ticket.id,
+                    ticket.token || salvo.token
+                );
+            }
+
+            return {
+                sucesso: true,
+                ticket: ticket,
+                dados: dados
+            };
+
+        } catch (erro) {
+            console.error("[HYPE] Erro no envio:", erro);
+
+            return {
+                sucesso: false,
+                mensagem: "Erro de conexão com o servidor."
+            };
+        }
+    };
+
+    /*
+     * Expõe uma função para o chat atual atualizar
+     * o atendimento depois do primeiro POST.
+     */
+    window.hypeSalvarAtendimentoCelular = function (dados) {
+        try {
+            const ticket = dados && (dados.ticket || dados);
+
+            if (ticket && ticket.id && ticket.token) {
+                salvarTicket(ticket.id, ticket.token);
+                return true;
+            }
+        } catch (e) {}
+
+        return false;
+    };
+
+    console.log("[HYPE] Correção de atendimento para celular carregada.");
+})();
+</script>
