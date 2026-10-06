@@ -10884,3 +10884,154 @@ a {
     console.log("[HYPE] Correção de atendimento para celular carregada.");
 })();
 </script>
+<style>
+body{background:radial-gradient(circle at 50% 0%,#7c19d8 0%,#260047 45%,#08000f 100%)!important;overflow-x:hidden}
+body:before{content:"✦  ◆  ✧  ✦  ◇  ◆  ✧";position:fixed;inset:0;font-size:32px;letter-spacing:55px;line-height:110px;color:#fff;opacity:.12;pointer-events:none;z-index:-1;animation:hypeFloat 8s linear infinite}
+@keyframes hypeFloat{0%{transform:translateY(30px) rotate(0deg)}50%{transform:translateY(-30px) rotate(5deg)}100%{transform:translateY(30px) rotate(0deg)}}
+</style>
+<style>
+#hype-chat-cliente-final-button,#hype-chat-cliente-final-window{z-index:999999!important}
+</style>
+<script>
+(function(){
+"use strict";
+
+const CHAVE="hype_store_ticket";
+
+function pegarTicket(){
+    try{
+        const bruto=localStorage.getItem(CHAVE);
+        if(!bruto) return null;
+        const t=JSON.parse(bruto);
+        if(!t || !t.id || !t.token) return null;
+        return {
+            id:String(t.id),
+            token:String(t.token)
+        };
+    }catch(e){
+        return null;
+    }
+}
+
+function salvarTicket(id,token){
+    if(!id || !token) return;
+    localStorage.setItem(CHAVE,JSON.stringify({
+        id:String(id),
+        token:String(token)
+    }));
+}
+
+async function carregarAtendimento(){
+    const t=pegarTicket();
+    if(!t) return null;
+
+    try{
+        const resposta=await fetch(
+            "/api/tickets/"+encodeURIComponent(t.id)+"?token="+encodeURIComponent(t.token),
+            {
+                method:"GET",
+                cache:"no-store",
+                headers:{
+                    "Accept":"application/json"
+                }
+            }
+        );
+
+        if(!resposta.ok){
+            return null;
+        }
+
+        const dados=await resposta.json();
+
+        if(dados && dados.id){
+            salvarTicket(dados.id,t.token);
+            return dados;
+        }
+
+        return null;
+    }catch(e){
+        return null;
+    }
+}
+
+async function enviarAtendimento(texto){
+    texto=String(texto||"").trim();
+    if(!texto) return {ok:false};
+
+    let t=pegarTicket();
+
+    if(!t){
+        try{
+            const resposta=await fetch("/api/tickets",{
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                },
+                body:JSON.stringify({
+                    nome:"Cliente",
+                    email:"cliente@hystore.com",
+                    discord:"",
+                    assunto:"Suporte",
+                    mensagem:texto
+                })
+            });
+
+            const dados=await resposta.json();
+
+            if(!resposta.ok || !dados.id || !dados.token){
+                return {ok:false};
+            }
+
+            salvarTicket(dados.id,dados.token);
+
+            return {
+                ok:true,
+                dados:dados
+            };
+        }catch(e){
+            return {ok:false};
+        }
+    }
+
+    try{
+        const resposta=await fetch(
+            "/api/tickets/"+encodeURIComponent(t.id)+"/mensagens",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                },
+                body:JSON.stringify({
+                    token:t.token,
+                    texto:texto
+                })
+            }
+        );
+
+        const dados=await resposta.json();
+
+        if(!resposta.ok){
+            if(resposta.status===401 || resposta.status===403 || resposta.status===404){
+                localStorage.removeItem(CHAVE);
+            }
+            return {ok:false,dados:dados};
+        }
+
+        return {
+            ok:true,
+            dados:dados
+        };
+    }catch(e){
+        return {ok:false};
+    }
+}
+
+window.hypeCarregarAtendimento=carregarAtendimento;
+window.hypeEnviarAtendimento=enviarAtendimento;
+window.hypeSalvarTicket=salvarTicket;
+window.hypePegarTicket=pegarTicket;
+
+})();
+</script>
