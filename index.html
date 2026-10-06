@@ -11135,3 +11135,47 @@ text-shadow:0 0 8px rgba(170,80,255,.7);
 <span>✧</span>
 <span>◇</span>
 </div>
+<script>
+(function(){
+"use strict";
+
+const HYPE_TICKET_KEY="hype_store_ticket";
+
+async function hypeVerificarTicketSalvo(){
+    try{
+        const salvo=localStorage.getItem(HYPE_TICKET_KEY);
+        if(!salvo) return;
+
+        const ticket=JSON.parse(salvo);
+
+        if(!ticket || !ticket.id || !ticket.token){
+            localStorage.removeItem(HYPE_TICKET_KEY);
+            return;
+        }
+
+        const resposta=await fetch(
+            "/api/tickets/"+encodeURIComponent(ticket.id)+
+            "?token="+encodeURIComponent(ticket.token)+
+            "&t="+Date.now(),
+            {
+                method:"GET",
+                cache:"no-store"
+            }
+        );
+
+        if(resposta.status===404){
+            console.log("[HYPE CHAT] Ticket antigo não existe mais. Criando novo atendimento no próximo envio.");
+            localStorage.removeItem(HYPE_TICKET_KEY);
+        }
+
+    }catch(e){
+        console.warn("[HYPE CHAT] Não foi possível verificar o atendimento.");
+    }
+}
+
+window.addEventListener("load",function(){
+    setTimeout(hypeVerificarTicketSalvo,1000);
+});
+
+})();
+</script>
