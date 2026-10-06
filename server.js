@@ -1,8 +1,11 @@
+﻿require("dotenv").config();
+
 
 const express = require("express");
 const fs = require("fs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { Client, GatewayIntentBits } = require("discord.js");
 
 const app = express();
 
@@ -26,6 +29,25 @@ const TURBOFY_CLIENT_SECRET =
     process.env.TURBOFY_CLIENTSECRET ||
     "";
 const ADMIN_PASSWORD = "apenasth";
+
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "";
+const discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+discordClient.once("ready", () => {
+    console.log(`Discord conectado como ${discordClient.user.tag}`);
+});
+
+discordClient.on("error", erro => {
+    console.error("Erro no bot Discord:", erro.message);
+});
+
+if (DISCORD_BOT_TOKEN) {
+    discordClient.login(DISCORD_BOT_TOKEN).catch(erro => {
+        console.error("Erro ao conectar bot Discord:", erro.message);
+    });
+} else {
+    console.error("DISCORD_BOT_TOKEN não configurado.");
+}
 const EMAIL_USUARIO = process.env.EMAIL_USUARIO || "";
 const EMAIL_SENHA_APP = process.env.EMAIL_SENHA_APP || "";
 
@@ -52,13 +74,321 @@ app.use((req, res, next) => {
     if (arquivosPrivados.includes(caminho)) {
         return res.status(403).json({
             sucesso: false,
-            erro: "Acesso não permitido."
+            erro: "Acesso nÃ£o permitido."
         });
     }
 
     next();
 });
 
+
+/* =========================================================
+   HYPE-ROTA-ATENDIMENTO-FINAL
+   Rota direta para mensagens do cliente
+   ========================================================= */
+
+app.post("/api/tickets/:id/mensagens", (req, res) => {
+
+    impedirCachePrivado(res);
+
+    try {
+
+        const id = String(req.params.id || "").trim();
+
+        const token = String(
+            req.body?.token || ""
+        ).trim();
+
+        const texto = String(
+            req.body?.texto ||
+            req.body?.mensagem ||
+            ""
+        ).trim();
+
+        if (!id) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "ID do atendimento não informado."
+            });
+        }
+
+        if (!token) {
+            return res.status(401).json({
+                sucesso: false,
+                erro: "Token do atendimento não informado."
+            });
+        }
+
+        if (!texto) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Digite uma mensagem."
+            });
+        }
+
+        const dados = lerTickets();
+
+        const tickets = Array.isArray(dados)
+            ? dados
+            : Array.isArray(dados?.tickets)
+                ? dados.tickets
+                : [];
+
+        const ticket = tickets.find(
+            item => String(item.id) === id
+        );
+
+        if (!ticket) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: "Atendimento não encontrado."
+            });
+        }
+
+        if (
+            String(ticket.token || "").trim() !== token
+        ) {
+            return res.status(403).json({
+                sucesso: false,
+                erro: "Token do atendimento inválido."
+            });
+        }
+
+        const status = String(
+            ticket.status || ""
+        ).trim().toUpperCase();
+
+        if (
+            status === "FECHADO" ||
+            status === "RESOLVIDO"
+        ) {
+            return res.status(409).json({
+                sucesso: false,
+                fechado: true,
+                mensagem:
+                    "Este atendimento está fechado. Abra um novo atendimento para continuar."
+            });
+        }
+
+        if (!Array.isArray(ticket.mensagens)) {
+            ticket.mensagens = [];
+        }
+
+        const agora = new Date().toISOString();
+
+        ticket.mensagens.push({
+            id: crypto
+                .randomBytes(8)
+                .toString("hex"),
+
+            autor: "cliente",
+
+            texto: texto,
+
+            criadoEm: agora
+        });
+
+        ticket.atualizadoEm = agora;
+
+        if (
+            !ticket.status ||
+            status === "RESOLVIDO"
+        ) {
+            ticket.status = "ABERTO";
+        }
+
+        salvarJSON(
+            CAMINHO_TICKETS,
+            Array.isArray(dados)
+                ? tickets
+                : {
+                    ...dados,
+                    tickets: tickets
+                }
+        );
+
+        const ticketPublico = {
+            ...ticket
+        };
+
+        delete ticketPublico.token;
+
+        return res.json({
+            sucesso: true,
+            mensagem: "Mensagem enviada com sucesso.",
+            ticket: ticketPublico
+        });
+
+    } catch (erro) {
+
+        console.error(
+            "HYPE - Erro ao enviar mensagem:",
+            erro
+        );
+
+        return res.status(500).json({
+            sucesso: false,
+            erro:
+                erro.message ||
+                "Erro interno ao enviar mensagem."
+        });
+    }
+
+});
+
+/* =========================================================
+   FIM HYPE-ROTA-ATENDIMENTO-FINAL
+   ========================================================= */
+
+/* =========================================================
+   HYPE_CORRECAO_MENSAGEM_ADMIN_FINAL
+   ENVIO CLIENTE -> TICKETS.JSON -> ADMIN
+   ========================================================= */
+
+app.post("/api/tickets/:id/mensagens", (req, res, next) => {
+
+    try {
+
+        const id = String(req.params.id || "").trim();
+
+        const tokenRecebido = String(
+            req.body?.token ||
+            req.query?.token ||
+            ""
+        ).trim();
+
+        const textoRecebido = String(
+            req.body?.texto ??
+            req.body?.mensagem ??
+            ""
+        ).trim();
+
+        if (!id) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: "ID do ticket não informado."
+            });
+        }
+
+        if (!tokenRecebido) {
+            return res.status(401).json({
+                sucesso: false,
+                mensagem: "Token do ticket não informado."
+            });
+        }
+
+        if (!textoRecebido) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: "Digite uma mensagem."
+            });
+        }
+
+        const tickets = lerTickets();
+
+        const indice = tickets.findIndex(
+            item => String(item.id) === id
+        );
+
+        if (indice === -1) {
+            return res.status(404).json({
+                sucesso: false,
+                mensagem: "Ticket não encontrado."
+            });
+        }
+
+        const ticket = tickets[indice];
+
+        if (
+            String(ticket.token || "").trim() !==
+            tokenRecebido
+        ) {
+            return res.status(403).json({
+                sucesso: false,
+                mensagem: "Token do ticket inválido."
+            });
+        }
+
+        if (
+            String(ticket.status || "")
+                .trim()
+                .toLowerCase() === "fechado"
+        ) {
+            return res.status(409).json({
+                sucesso: false,
+                fechado: true,
+                mensagem:
+                    "Este ticket está fechado. Abra um novo ticket para continuar o atendimento."
+            });
+        }
+
+        if (!Array.isArray(ticket.mensagens)) {
+            ticket.mensagens = [];
+        }
+
+        const agora = new Date().toISOString();
+
+        const novaMensagem = {
+            id: crypto.randomBytes(8).toString("hex"),
+            autor: "cliente",
+            texto: textoRecebido,
+            criadoEm: agora
+        };
+
+        ticket.mensagens.push(novaMensagem);
+
+        ticket.atualizadoEm = agora;
+
+        if (!ticket.status) {
+            ticket.status = "ABERTO";
+        }
+
+        tickets[indice] = ticket;
+
+        salvarTickets(tickets);
+
+        console.log(
+            "[SUPORTE] Mensagem recebida no ticket " +
+            ticket.id +
+            ": " +
+            textoRecebido
+        );
+
+        return res.status(200).json({
+            sucesso: true,
+            mensagem: "Mensagem enviada com sucesso.",
+            ticket: {
+                id: ticket.id,
+                nome: ticket.nome,
+                email: ticket.email,
+                discord: ticket.discord,
+                assunto: ticket.assunto,
+                status: ticket.status,
+                criadoEm: ticket.criadoEm,
+                atualizadoEm: ticket.atualizadoEm,
+                mensagens: ticket.mensagens
+            }
+        });
+
+    } catch (erro) {
+
+        console.error(
+            "[SUPORTE] Erro ao salvar mensagem:",
+            erro
+        );
+
+        return res.status(500).json({
+            sucesso: false,
+            mensagem: "Erro interno ao salvar a mensagem.",
+            erro: erro.message
+        });
+    }
+
+});
+
+/* =========================================================
+   FIM HYPE_CORRECAO_MENSAGEM_ADMIN_FINAL
+   ========================================================= */
 app.use(express.static(__dirname));
 /* ===== BLOQUEIO FINAL - TICKET FECHADO ===== */
 app.use(async (req, res, next) => {
@@ -108,7 +438,7 @@ app.use(async (req, res, next) => {
 /* ===== FIM DO BLOQUEIO FINAL ===== */
 
 /* =========================================================
-   SESSÕES ADMIN
+   SESSÃ•ES ADMIN
 ========================================================= */
 
 const sessoesAdmin = new Map();
@@ -146,7 +476,7 @@ function autenticarAdmin(req, res, next) {
     if (!token) {
         return res.status(401).json({
             sucesso: false,
-            erro: "Não autenticado."
+            erro: "NÃ£o autenticado."
         });
     }
 
@@ -155,7 +485,7 @@ function autenticarAdmin(req, res, next) {
     if (!sessao) {
         return res.status(401).json({
             sucesso: false,
-            erro: "Sessão inválida."
+            erro: "SessÃ£o invÃ¡lida."
         });
     }
 
@@ -164,7 +494,7 @@ function autenticarAdmin(req, res, next) {
 
         return res.status(401).json({
             sucesso: false,
-            erro: "Sessão expirada."
+            erro: "SessÃ£o expirada."
         });
     }
 
@@ -193,7 +523,7 @@ function exigirSessaoAdmin(req, res, next) {
     if (!verificarSessaoAdmin(req)) {
         return res.status(401).json({
             sucesso: false,
-            erro: "Não autorizado."
+            erro: "NÃ£o autorizado."
         });
     }
 
@@ -399,7 +729,7 @@ function entregarProduto(pedido) {
     if (!estoque[dados.chave]) {
         return {
             sucesso: false,
-            erro: "Produto não encontrado no estoque."
+            erro: "Produto nÃ£o encontrado no estoque."
         };
     }
 
@@ -452,7 +782,7 @@ if (EMAIL_USUARIO && EMAIL_SENHA_APP) {
 
 async function enviarEmailEntrega(pedido, dadosProduto) {
     if (!transporter) {
-        throw new Error("E-mail não configurado.");
+        throw new Error("E-mail nÃ£o configurado.");
     }
 
     const destinatario = pedido.email;
@@ -477,7 +807,7 @@ async function enviarEmailEntrega(pedido, dadosProduto) {
 
                 <h2>Pagamento aprovado!</h2>
 
-                <p>Olá!</p>
+                <p>OlÃ¡!</p>
 
                 <p>
                     Seu pedido <strong>${pedido.id}</strong> foi aprovado.
@@ -496,13 +826,13 @@ async function enviarEmailEntrega(pedido, dadosProduto) {
 
                 <div style="background:#0d0d0d;padding:20px;border-radius:10px">
                     <p>
-                        <strong>E-mail/Usuário:</strong><br>
-                        ${emailProduto || "Não informado"}
+                        <strong>E-mail/UsuÃ¡rio:</strong><br>
+                        ${emailProduto || "NÃ£o informado"}
                     </p>
 
                     <p>
                         <strong>Senha:</strong><br>
-                        ${senhaProduto || "Não informada"}
+                        ${senhaProduto || "NÃ£o informada"}
                     </p>
                 </div>
 
@@ -524,22 +854,59 @@ async function enviarEmailEntrega(pedido, dadosProduto) {
 }
 
 /* =========================================================
-   ENTREGA AUTOMÁTICA
+   ENTREGA AUTOMÃTICA
 ========================================================= */
 
 const pedidosEmProcessamento = new Set();
 
+async function enviarDiscordEntrega(pedido, dadosProduto) {
+    if (!DISCORD_BOT_TOKEN) {
+        throw new Error("DISCORD_BOT_TOKEN não configurado.");
+    }
+
+    const discordId = String(pedido.discord || "").trim();
+
+    if (!/^\d{17,20}$/.test(discordId)) {
+        throw new Error("ID do Discord inválido.");
+    }
+
+    if (!discordClient.isReady()) {
+        throw new Error("Bot do Discord ainda não está conectado.");
+    }
+
+    const usuario = await discordClient.users.fetch(discordId);
+
+    const emailProduto =
+        dadosProduto.email ||
+        dadosProduto.usuario ||
+        "";
+
+    const senhaProduto =
+        dadosProduto.senha ||
+        "";
+
+    await usuario.send({
+        content:
+`🛒 **HYPE STORE — PEDIDO APROVADO**
+
+Seu pagamento foi confirmado!
+
+**Produto:** ${pedido.produto}
+**Plano:** ${pedido.opcao || "Não informado"}
+**Pedido:** ${pedido.id}
+
+🔐 **Dados da sua conta**
+
+**E-mail/Usuário:** \`${emailProduto || "Não informado"}\`
+**Senha:** \`${senhaProduto || "Não informada"}\`
+
+Obrigado por comprar na **HYPE STORE**!`
+    });
+}
 async function processarPedidoPago(pedido) {
     if (!pedido) return;
 
     if (pedido.statusPagamento !== "PAID") {
-        return;
-    }
-
-    if (
-        pedido.entregue === true &&
-        pedido.emailEnviado === true
-    ) {
         return;
     }
 
@@ -556,16 +923,19 @@ async function processarPedidoPago(pedido) {
             return;
         }
 
-        let dadosEntrega = null;
+        let dadosEntrega = pedidoAtual.dadosEntrega || null;
 
-        if (!pedidoAtual.entregue) {
+        if (!dadosEntrega) {
             const entrega = entregarProduto(pedidoAtual);
 
             if (!entrega.sucesso) {
-                atualizarPedido(pedidoAtual.id, {
-                    status: "PAGO_SEM_ESTOQUE",
-                    erroEntrega: entrega.erro
-                });
+                atualizarPedido(
+                    pedidoAtual.id,
+                    {
+                        status: "PAGO_SEM_ESTOQUE",
+                        erroEntrega: entrega.erro
+                    }
+                );
 
                 console.error(
                     `Pedido ${pedidoAtual.id}:`,
@@ -580,30 +950,54 @@ async function processarPedidoPago(pedido) {
             pedidoAtual = atualizarPedido(
                 pedidoAtual.id,
                 {
+                    dadosEntrega,
                     entregue: true,
                     status: "PAGO"
                 }
             );
-        } else {
-            dadosEntrega = pedidoAtual.dadosEntrega || null;
         }
 
-        if (
-            dadosEntrega &&
-            !pedidoAtual.dadosEntrega
-        ) {
-            pedidoAtual = atualizarPedido(
-                pedidoAtual.id,
-                {
+        let discordOk = pedidoAtual.discordEnviado === true;
+        let emailOk = pedidoAtual.emailEnviado === true;
+
+        if (!discordOk) {
+            try {
+                await enviarDiscordEntrega(
+                    pedidoAtual,
                     dadosEntrega
-                }
-            );
+                );
+
+                atualizarPedido(
+                    pedidoAtual.id,
+                    {
+                        discordEnviado: true,
+                        discordEnviadoEm: new Date().toISOString(),
+                        erroDiscord: null
+                    }
+                );
+
+                discordOk = true;
+
+                console.log(
+                    `Pedido ${pedidoAtual.id}: entrega enviada por DM no Discord.`
+                );
+
+            } catch (erroDiscord) {
+                console.error(
+                    `Erro ao enviar DM do pedido ${pedidoAtual.id}:`,
+                    erroDiscord.message
+                );
+
+                atualizarPedido(
+                    pedidoAtual.id,
+                    {
+                        erroDiscord: erroDiscord.message
+                    }
+                );
+            }
         }
 
-        if (
-            !pedidoAtual.emailEnviado &&
-            dadosEntrega
-        ) {
+        if (!emailOk) {
             try {
                 await enviarEmailEntrega(
                     pedidoAtual,
@@ -615,13 +1009,16 @@ async function processarPedidoPago(pedido) {
                     {
                         emailEnviado: true,
                         emailEnviadoEm: new Date().toISOString(),
-                        status: "ENTREGUE"
+                        erroEmail: null
                     }
                 );
+
+                emailOk = true;
 
                 console.log(
                     `Pedido ${pedidoAtual.id}: entrega enviada por e-mail.`
                 );
+
             } catch (erroEmail) {
                 console.error(
                     `Erro ao enviar e-mail do pedido ${pedidoAtual.id}:`,
@@ -631,21 +1028,81 @@ async function processarPedidoPago(pedido) {
                 atualizarPedido(
                     pedidoAtual.id,
                     {
-                        erroEmail: erroEmail.message,
-                        status: "PAGO_ENTREGA_PENDENTE"
+                        erroEmail: erroEmail.message
                     }
                 );
             }
         }
+
+        if (discordOk && emailOk) {
+            atualizarPedido(
+                pedidoAtual.id,
+                {
+                    entregue: true,
+                    status: "ENTREGUE"
+                }
+            );
+        } else if (discordOk || emailOk) {
+            atualizarPedido(
+                pedidoAtual.id,
+                {
+                    entregue: true,
+                    status: "ENTREGA_PARCIAL"
+                }
+            );
+        } else {
+            atualizarPedido(
+                pedidoAtual.id,
+                {
+                    status: "PAGO_ENTREGA_PENDENTE"
+                }
+            );
+        }
+
     } finally {
         pedidosEmProcessamento.delete(pedido.id);
     }
 }
-
 /* =========================================================
    STATUS
 ========================================================= */
 
+app.post("/api/admin/reentregar/:pedidoId", async (req, res) => {
+    try {
+        const pedido = encontrarPedido(req.params.pedidoId);
+
+        if (!pedido) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: "Pedido não encontrado."
+            });
+        }
+
+        if (pedido.statusPagamento !== "PAID") {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Este pedido ainda não está pago."
+            });
+        }
+
+        await processarPedidoPago(pedido);
+
+        const pedidoAtualizado = encontrarPedido(pedido.id);
+
+        return res.json({
+            sucesso: true,
+            pedido: pedidoAtualizado
+        });
+
+    } catch (erro) {
+        console.error("Erro ao reentregar pedido:", erro);
+
+        return res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
 app.get("/api/status", (req, res) => {
     res.json({
         online: true,
@@ -687,6 +1144,15 @@ app.get("/api/estoque/:produto", (req, res) => {
 ========================================================= */
 
 app.post("/api/pedidos", (req, res) => {
+
+    const discordId = String(req.body.discord || "").trim();
+
+    if (!/^\d{17,20}$/.test(discordId)) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Informe um ID de usuário do Discord válido."
+        });
+    }
     try {
         const {
             nome,
@@ -700,17 +1166,39 @@ app.post("/api/pedidos", (req, res) => {
         if (!email) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "E-mail é obrigatório."
+                erro: "E-mail Ã© obrigatÃ³rio."
             });
         }
 
         if (!produto) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "Produto é obrigatório."
+                erro: "Produto Ã© obrigatÃ³rio."
             });
         }
 
+        // BLOQUEIO DE COMPRA SEM ESTOQUE
+        const dadosEstoque = obterDadosProduto(produto, opcao);
+
+        if (!dadosEstoque || !dadosEstoque.chave) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Produto ou opção inválida."
+            });
+        }
+
+        const existeEstoque = Array.isArray(dadosEstoque.itens) &&
+            dadosEstoque.itens.some(item =>
+                !item.status ||
+                String(item.status).toLowerCase() === "disponivel"
+            );
+
+        if (!existeEstoque) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Produto sem estoque no momento."
+            });
+        }
         const pedido = {
             id: gerarIdPedido(),
             nome: nome || "",
@@ -756,7 +1244,7 @@ app.get("/api/pedidos/:id", (req, res) => {
     if (!pedido) {
         return res.status(404).json({
             sucesso: false,
-            erro: "Pedido não encontrado."
+            erro: "Pedido nÃ£o encontrado."
         });
     }
 
@@ -782,7 +1270,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
         if (!pedidoId) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "pedidoId é obrigatório."
+                erro: "pedidoId Ã© obrigatÃ³rio."
             });
         }
 
@@ -792,7 +1280,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
         ) {
             return res.status(500).json({
                 sucesso: false,
-                erro: "Credenciais da TurbofyPay não configuradas."
+                erro: "Credenciais da TurbofyPay nÃ£o configuradas."
             });
         }
 
@@ -801,14 +1289,14 @@ app.post("/api/pagamento/pix", async (req, res) => {
         if (!Number.isFinite(valorNumerico)) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "Valor inválido."
+                erro: "Valor invÃ¡lido."
             });
         }
 
         if (valorNumerico < 1.5) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "O valor mínimo do pagamento é R$ 1,50"
+                erro: "O valor mÃ­nimo do pagamento Ã© R$ 1,50"
             });
         }
 
@@ -817,7 +1305,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
         if (!pedido) {
             return res.status(404).json({
                 sucesso: false,
-                erro: "Pedido não encontrado."
+                erro: "Pedido nÃ£o encontrado."
             });
         }
 
@@ -886,6 +1374,8 @@ app.post("/api/pagamento/pix", async (req, res) => {
             });
         }
 
+        console.log("RESPOSTA TURBOFY COMPLETA:", JSON.stringify(dados, null, 2));
+
         const chargeId =
             dados.chargeId ||
             dados.id ||
@@ -900,6 +1390,15 @@ app.post("/api/pagamento/pix", async (req, res) => {
             dados.data?.pix?.copyPaste ||
             "";
 
+        const qrCode =
+            dados.pix?.qrCode ||
+            dados.qrCode ||
+            dados.pix?.qr_code ||
+            dados.qr_code ||
+            dados.data?.pix?.qrCode ||
+            dados.data?.qrCode ||
+            "";
+
         const expiresAt =
             dados.expiresAt ||
             dados.pix?.expiresAt ||
@@ -908,13 +1407,13 @@ app.post("/api/pagamento/pix", async (req, res) => {
 
         if (!chargeId) {
             console.error(
-                "TurbofyPay não retornou chargeId:",
+                "TurbofyPay nÃ£o retornou chargeId:",
                 dados
             );
 
             return res.status(500).json({
                 sucesso: false,
-                erro: "A TurbofyPay não retornou o ID da cobrança.",
+                erro: "A TurbofyPay nÃ£o retornou o ID da cobranÃ§a.",
                 detalhes: dados
             });
         }
@@ -924,6 +1423,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
             {
                 chargeId,
                 copyPaste,
+                qrCode,
                 expiresAt,
                 valor: valorNumerico,
                 statusPagamento: "PENDING",
@@ -937,6 +1437,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
             pedidoId,
             chargeId,
             copyPaste,
+            qrCode,
             expiresAt,
             status: "PENDING"
         });
@@ -962,7 +1463,8 @@ app.get(
     "/api/pagamento/status/:chargeId",
     async (req, res) => {
         try {
-            const chargeId = req.params.chargeId;
+
+        const chargeId = req.params.chargeId;
 
             if (
                 !TURBOFY_CLIENT_ID ||
@@ -970,7 +1472,7 @@ app.get(
             ) {
                 return res.status(500).json({
                     sucesso: false,
-                    erro: "Credenciais da TurbofyPay não configuradas."
+                    erro: "Credenciais da TurbofyPay nÃ£o configuradas."
                 });
             }
 
@@ -1082,7 +1584,7 @@ app.get(
 );
 
 /* =========================================================
-   MONITORAMENTO AUTOMÁTICO DOS PEDIDOS
+   MONITORAMENTO AUTOMÃTICO DOS PEDIDOS
 ========================================================= */
 
 async function verificarPagamentosAutomaticamente() {
@@ -1182,7 +1684,7 @@ app.post("/api/admin/login", (req, res) => {
         if (!ADMIN_PASSWORD) {
             return res.status(500).json({
                 sucesso: false,
-                erro: "Senha administrativa não configurada."
+                erro: "Senha administrativa nÃ£o configurada."
             });
         }
 
@@ -1277,7 +1779,7 @@ app.get("/api/admin/me", (req, res) => {
        "tickets": []
    }
 
-   A função abaixo converte isso para o array
+   A funÃ§Ã£o abaixo converte isso para o array
    utilizado pelas rotas.
 */
 function lerPrecos() {
@@ -1429,7 +1931,7 @@ app.post("/api/tickets", (req, res) => {
         if (!nome || !email || !mensagem) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "Nome, e-mail e mensagem são obrigatórios."
+                erro: "Nome, e-mail e mensagem sÃ£o obrigatÃ³rios."
             });
         }
 
@@ -1491,7 +1993,7 @@ app.post("/api/tickets", (req, res) => {
         salvarTickets(tickets);
 
         /*
-           O TOKEN É ENTREGUE SOMENTE AQUI.
+           O TOKEN Ã‰ ENTREGUE SOMENTE AQUI.
         */
         res.json({
             sucesso: true,
@@ -1538,7 +2040,7 @@ app.get(
             if (!token) {
                 return res.status(401).json({
                     sucesso: false,
-                    erro: "Token do ticket não informado."
+                    erro: "Token do ticket nÃ£o informado."
                 });
             }
 
@@ -1551,7 +2053,7 @@ app.get(
             if (!ticket) {
                 return res.status(404).json({
                     sucesso: false,
-                    erro: "Ticket não encontrado."
+                    erro: "Ticket nÃ£o encontrado."
                 });
             }
 
@@ -1599,7 +2101,7 @@ app.use((req, res, next) => {
                 return res.status(409).json({
                     sucesso: false,
                     fechado: true,
-                    mensagem: "Este ticket está fechado. Abra um novo ticket para continuar o atendimento."
+                    mensagem: "Este ticket estÃ¡ fechado. Abra um novo ticket para continuar o atendimento."
                 });
             }
         } catch (erro) {
@@ -1632,7 +2134,7 @@ app.post(
             if (!token) {
                 return res.status(401).json({
                     sucesso: false,
-                    erro: "Token do ticket não informado."
+                    erro: "Token do ticket nÃ£o informado."
                 });
             }
 
@@ -1655,7 +2157,7 @@ app.post(
             if (indice === -1) {
                 return res.status(404).json({
                     sucesso: false,
-                    erro: "Ticket não encontrado."
+                    erro: "Ticket nÃ£o encontrado."
                 });
             }
 
@@ -1796,7 +2298,7 @@ app.get(
             if (!ticket) {
                 return res.status(404).json({
                     sucesso: false,
-                    erro: "Ticket não encontrado."
+                    erro: "Ticket nÃ£o encontrado."
                 });
             }
 
@@ -1857,7 +2359,7 @@ function responderTicketComoAdmin(req, res) {
         if (indice === -1) {
             return res.status(404).json({
                 sucesso: false,
-                erro: "Ticket não encontrado."
+                erro: "Ticket nÃ£o encontrado."
             });
         }
 
@@ -1887,11 +2389,7 @@ function responderTicketComoAdmin(req, res) {
 
         ticket.atualizadoEm = agora;
 
-        if (
-            ticket.status === "FECHADO"
-        ) {
-            ticket.status = "ABERTO";
-        }
+        
 
         tickets[indice] = ticket;
 
@@ -1922,7 +2420,7 @@ app.post(
 );
 
 /*
-   Compatibilidade com versões do admin.html
+   Compatibilidade com versÃµes do admin.html
    que utilizem /mensagens.
 */
 app.post(
@@ -1957,7 +2455,7 @@ app.patch(
             if (!ticket) {
                 return res.status(404).json({
                     sucesso: false,
-                    mensagem: "Ticket não encontrado."
+                    mensagem: "Ticket nÃ£o encontrado."
                 });
             }
 
@@ -2017,7 +2515,7 @@ app.patch(
             ) {
                 return res.status(400).json({
                     sucesso: false,
-                    erro: "Status inválido."
+                    erro: "Status invÃ¡lido."
                 });
             }
 
@@ -2030,7 +2528,7 @@ app.patch(
             if (indice === -1) {
                 return res.status(404).json({
                     sucesso: false,
-                    erro: "Ticket não encontrado."
+                    erro: "Ticket nÃ£o encontrado."
                 });
             }
 
@@ -2074,7 +2572,7 @@ app.get(
             if (!transporter) {
                 return res.status(500).json({
                     sucesso: false,
-                    erro: "E-mail não configurado."
+                    erro: "E-mail nÃ£o configurado."
                 });
             }
 
@@ -2117,7 +2615,7 @@ function garantirArquivos() {
     } else {
         /*
            Corrige automaticamente tickets.json caso
-           esteja vazio ou em formato incompatível.
+           esteja vazio ou em formato incompatÃ­vel.
         */
         const dados = lerJSON(
             CAMINHO_TICKETS,
@@ -2182,7 +2680,7 @@ app.put("/api/admin/precos", exigirSessaoAdmin, (req, res) => {
     if (!Number.isFinite(mensal) || mensal <= 0 || !Number.isFinite(anual) || anual <= 0) {
         return res.status(400).json({
             sucesso: false,
-            erro: "Informe preços válidos."
+            erro: "Informe preÃ§os vÃ¡lidos."
         });
     }
 
@@ -2216,14 +2714,14 @@ app.post("/api/admin/estoque", exigirSessaoAdmin, (req, res) => {
     if (!produto) {
         return res.status(400).json({
             sucesso: false,
-            erro: "Produto inválido."
+            erro: "Produto invÃ¡lido."
         });
     }
 
     if (!email || !senha) {
         return res.status(400).json({
             sucesso: false,
-            erro: "Email e senha são obrigatórios."
+            erro: "Email e senha sÃ£o obrigatÃ³rios."
         });
     }
 
@@ -2256,7 +2754,7 @@ app.delete("/api/admin/estoque/:produto/:id", exigirSessaoAdmin, (req, res) => {
     if (!produto) {
         return res.status(400).json({
             sucesso: false,
-            erro: "Produto inválido."
+            erro: "Produto invÃ¡lido."
         });
     }
 
@@ -2271,7 +2769,7 @@ app.delete("/api/admin/estoque/:produto/:id", exigirSessaoAdmin, (req, res) => {
     if (indice === -1) {
         return res.status(404).json({
             sucesso: false,
-            erro: "Conta disponível não encontrada."
+            erro: "Conta disponÃ­vel nÃ£o encontrada."
         });
     }
 
@@ -2306,14 +2804,35 @@ app.listen(PORT, () => {
         `Tickets: ${CAMINHO_TICKETS}`
     );
     console.log(
-        `E-mail configurado: ${transporter ? "SIM" : "NÃO"}`
+        `E-mail configurado: ${transporter ? "SIM" : "NÃƒO"}`
     );
     console.log(
-        `Admin configurado: ${ADMIN_PASSWORD ? "SIM" : "NÃO"}`
+        `Admin configurado: ${ADMIN_PASSWORD ? "SIM" : "NÃƒO"}`
     );
     console.log("======================================");
     console.log("");
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

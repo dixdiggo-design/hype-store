@@ -1,32 +1,30 @@
 [
   {
-    "id": 1789084710161,
-    "nome": "antony sousa",
-    "discord": "th.00.00.",
+    "id": "PED-1791238838676-42BF6F",
+    "nome": "antony",
     "email": "dixdiggo@gmail.com",
-    "itens": [
-      {
-        "nome": "Nitro Discord",
-        "preco": 10,
-        "quantidade": 1
-      }
-    ],
-    "data": "2026-09-10T23:58:30.161Z",
-    "status": "aguardando pagamento"
-  },
-  {
-    "id": 1789086888800,
-    "nome": "antony sousa",
-    "discord": "thg",
-    "email": "asdaw",
-    "itens": [
-      {
-        "nome": "Nitro Discord",
-        "preco": 10,
-        "quantidade": 1
-      }
-    ],
-    "data": "2026-09-11T00:34:48.800Z",
-    "status": "aguardando pagamento"
+    "discord": "669186103936286732",
+    "produto": "Nitro Discord Mensal",
+    "opcao": "Mensal",
+    "valor": 2,
+    "status": "ENTREGUE",
+    "statusPagamento": "PAID",
+    "criadoEm": "2026-10-05T22:20:38.676Z",
+    "atualizadoEm": "2026-10-05T22:21:19.157Z",
+    "entregue": true,
+    "emailEnviado": true,
+    "discordEnviado": true,
+    "discordEnviadoEm": "2026-10-05T22:26:48.854Z",
+    "erroDiscord": null,
+    "chargeId": "35373a2c-59bf-405d-b6b6-c760e8aacfcb",
+    "dadosEntrega": {
+      "id": "STK-muvtbtv5-da4cfc",
+      "email": "aaa",
+      "senha": "aaa",
+      "status": "disponivel",
+      "criadoEm": "2026-10-05T22:19:52.433Z"
+    },
+    "emailEnviadoEm": "2026-10-05T22:55:15.334Z",
+    "erroEmail": null
   }
 ]

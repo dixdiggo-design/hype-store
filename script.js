@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // HYPE STORE - SCRIPT PRINCIPAL
 // ==========================================
 
@@ -122,8 +122,8 @@ function atualizarCarrinho() {
     if (carrinho.length === 0) {
         lista.innerHTML = `
             <div class="carrinho-vazio">
-                <div class="carrinho-vazio-icon">🛒</div>
-                <strong>Seu carrinho está vazio</strong>
+                <div class="carrinho-vazio-icon">ðŸ›’</div>
+                <strong>Seu carrinho estÃ¡ vazio</strong>
                 <p>Adicione um produto para continuar.</p>
             </div>
         `;
@@ -178,7 +178,7 @@ function atualizarCarrinho() {
                 onclick="removerProduto(${index})"
                 aria-label="Remover produto"
             >
-                ×
+                Ã—
             </button>
         `;
 
@@ -206,7 +206,7 @@ function abrirCarrinho() {
 
     if (!modal) {
         console.error(
-            "Modal do carrinho não encontrado."
+            "Modal do carrinho nÃ£o encontrado."
         );
 
         return;
@@ -245,7 +245,7 @@ function fecharCarrinho() {
 function abrirCheckout() {
     if (carrinho.length === 0) {
         alert(
-            "Seu carrinho está vazio."
+            "Seu carrinho estÃ¡ vazio."
         );
 
         return;
@@ -258,7 +258,7 @@ function abrirCheckout() {
 
     if (!modal) {
         console.error(
-            "Modal de checkout não encontrado."
+            "Modal de checkout nÃ£o encontrado."
         );
 
         return;
@@ -317,11 +317,11 @@ async function gerarPagamentoPix() {
 
     if (!nomeInput || !discordInput || !emailInput) {
         console.error(
-            "Campos do checkout não encontrados."
+            "Campos do checkout nÃ£o encontrados."
         );
 
         alert(
-            "Erro no formulário de checkout."
+            "Erro no formulÃ¡rio de checkout."
         );
 
         return;
@@ -337,7 +337,7 @@ async function gerarPagamentoPix() {
         emailInput.value.trim();
 
     // ==========================================
-    // VALIDAÇÃO
+    // VALIDAÃ‡ÃƒO
     // ==========================================
 
     if (!nome) {
@@ -352,7 +352,7 @@ async function gerarPagamentoPix() {
 
     if (!discord) {
         alert(
-            "Digite seu Discord."
+            "Digite seu ID numérico do Discord."
         );
 
         discordInput.focus();
@@ -372,7 +372,7 @@ async function gerarPagamentoPix() {
 
     if (!email.includes("@")) {
         alert(
-            "Digite um e-mail válido."
+            "Digite um e-mail vÃ¡lido."
         );
 
         emailInput.focus();
@@ -382,7 +382,7 @@ async function gerarPagamentoPix() {
 
     if (carrinho.length === 0) {
         alert(
-            "Seu carrinho está vazio."
+            "Seu carrinho estÃ¡ vazio."
         );
 
         return;
@@ -392,19 +392,19 @@ async function gerarPagamentoPix() {
         calcularTotal();
 
     // ==========================================
-    // VALOR MÍNIMO
+    // VALOR MÃNIMO
     // ==========================================
 
     if (valor < 1.50) {
         alert(
-            "O valor mínimo do pagamento é R$ 1,50."
+            "O valor mÃ­nimo do pagamento Ã© R$ 1,50."
         );
 
         return;
     }
 
     // ==========================================
-    // DESABILITAR BOTÃO
+    // DESABILITAR BOTÃƒO
     // ==========================================
 
     if (botao) {
@@ -477,7 +477,83 @@ async function gerarPagamentoPix() {
         );
 
         // ==========================================
-        // ENVIAR PARA O SERVIDOR
+        // 1. CRIAR PEDIDO
+        // ==========================================
+
+        const respostaPedido =
+            await fetch(
+                "/api/pedidos",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            nome:
+                                nome,
+
+                            email:
+                                email,
+
+                            discord:
+                                discord,
+
+                            produto:
+                                itensParaEnviar[0]?.nome ||
+                                "Nitro Discord",
+
+                            opcao:
+                                itensParaEnviar[0]?.opcao ||
+                                "",
+
+                            valor:
+                                valor
+                        })
+                }
+            );
+
+        let dadosPedido;
+
+        try {
+            dadosPedido =
+                await respostaPedido.json();
+        } catch (erroJson) {
+            throw new Error(
+                "O servidor retornou uma resposta inv?lida ao criar o pedido."
+            );
+        }
+
+        console.log(
+            "RESPOSTA DA CRIA??O DO PEDIDO:",
+            dadosPedido
+        );
+
+        if (
+            !respostaPedido.ok ||
+            !dadosPedido?.sucesso ||
+            !dadosPedido?.pedido?.id
+        ) {
+            throw new Error(
+                dadosPedido?.erro ||
+                dadosPedido?.message ||
+                "N?o foi poss?vel criar o pedido."
+            );
+        }
+
+        const pedidoId =
+            dadosPedido.pedido.id;
+
+        console.log(
+            "PEDIDO CRIADO:",
+            pedidoId
+        );
+
+        // ==========================================
+        // 2. GERAR PAGAMENTO PIX
         // ==========================================
 
         const resposta =
@@ -493,20 +569,17 @@ async function gerarPagamentoPix() {
 
                     body:
                         JSON.stringify({
-                            nome:
-                                nome,
-
-                            discord:
-                                discord,
-
-                            email:
-                                email,
-
-                            itens:
-                                itensParaEnviar,
+                            pedidoId:
+                                pedidoId,
 
                             valor:
-                                valor
+                                valor,
+
+                            produto:
+                                dadosPedido.pedido.produto,
+
+                            opcao:
+                                dadosPedido.pedido.opcao
                         })
                 }
             );
@@ -522,7 +595,7 @@ async function gerarPagamentoPix() {
                 await resposta.json();
         } catch (erroJson) {
             throw new Error(
-                "O servidor retornou uma resposta inválida."
+                "O servidor retornou uma resposta inv?lida."
             );
         }
 
@@ -553,12 +626,12 @@ async function gerarPagamentoPix() {
             !dados.chargeId
         ) {
             console.error(
-                "Resposta inválida do servidor:",
+                "Resposta inv?lida do servidor:",
                 dados
             );
 
             throw new Error(
-                "Pagamento não foi criado corretamente."
+                "Pagamento n?o foi criado corretamente."
             );
         }
 
@@ -578,7 +651,7 @@ async function gerarPagamentoPix() {
 
         alert(
             erro.message ||
-            "Não foi possível gerar o pagamento."
+            "NÃ£o foi possÃ­vel gerar o pagamento."
         );
 
     } finally {
@@ -605,7 +678,7 @@ function mostrarPagamentoPix(dados) {
 
     if (!pixModal) {
         console.error(
-            "Modal Pix não encontrado."
+            "Modal Pix nÃ£o encontrado."
         );
 
         return;
@@ -679,7 +752,7 @@ function mostrarPagamentoPix(dados) {
 
     if (statusPix) {
         statusPix.textContent =
-            "🟡 AGUARDANDO PAGAMENTO...";
+            "ðŸŸ¡ AGUARDANDO PAGAMENTO...";
     }
 
     // ==========================================
@@ -694,7 +767,7 @@ function mostrarPagamentoPix(dados) {
     if (mensagem) {
         mensagem.innerHTML = `
             <span>
-                Após realizar o pagamento, aguarde a confirmação automática.
+                ApÃ³s realizar o pagamento, aguarde a confirmaÃ§Ã£o automÃ¡tica.
             </span>
         `;
     }
@@ -723,7 +796,7 @@ async function copiarPix() {
         !campo.value
     ) {
         alert(
-            "Código Pix não encontrado."
+            "CÃ³digo Pix nÃ£o encontrado."
         );
 
         return;
@@ -746,7 +819,7 @@ async function copiarPix() {
         }
 
         alert(
-            "Código Pix copiado!"
+            "CÃ³digo Pix copiado!"
         );
 
     } catch (erro) {
@@ -762,7 +835,7 @@ async function copiarPix() {
         );
 
         alert(
-            "Código Pix copiado!"
+            "CÃ³digo Pix copiado!"
         );
     }
 }
@@ -796,7 +869,7 @@ async function verificarPagamento(
 ) {
     if (!chargeId) {
         console.error(
-            "Charge ID não informado."
+            "Charge ID nÃ£o informado."
         );
 
         return;
@@ -860,7 +933,7 @@ async function consultarStatusPagamento(
                 await resposta.json();
         } catch (erroJson) {
             console.error(
-                "Resposta inválida do servidor."
+                "Resposta invÃ¡lida do servidor."
             );
 
             return;
@@ -886,7 +959,7 @@ async function consultarStatusPagamento(
         ) {
             if (statusPix) {
                 statusPix.textContent =
-                    "✅ PAGAMENTO APROVADO!";
+                    "âœ… PAGAMENTO APROVADO!";
             }
 
             if (intervaloPagamento) {
@@ -914,7 +987,7 @@ async function consultarStatusPagamento(
         ) {
             if (statusPix) {
                 statusPix.textContent =
-                    "🟡 AGUARDANDO PAGAMENTO...";
+                    "ðŸŸ¡ AGUARDANDO PAGAMENTO...";
             }
 
             return;
@@ -929,7 +1002,7 @@ async function consultarStatusPagamento(
         ) {
             if (statusPix) {
                 statusPix.textContent =
-                    "🟡 PROCESSANDO PAGAMENTO...";
+                    "ðŸŸ¡ PROCESSANDO PAGAMENTO...";
             }
 
             return;
@@ -946,7 +1019,7 @@ async function consultarStatusPagamento(
         ) {
             if (statusPix) {
                 statusPix.textContent =
-                    "❌ PAGAMENTO EXPIRADO OU CANCELADO.";
+                    "âŒ PAGAMENTO EXPIRADO OU CANCELADO.";
             }
 
             if (intervaloPagamento) {
@@ -973,7 +1046,7 @@ async function consultarStatusPagamento(
 
             if (statusPix) {
                 statusPix.textContent =
-                    "⚠️ Erro ao verificar pagamento.";
+                    "âš ï¸ Erro ao verificar pagamento.";
             }
 
             return;
@@ -1013,7 +1086,7 @@ function mostrarPagamentoAprovado(
 
     if (statusPix) {
         statusPix.textContent =
-            "✅ PAGAMENTO APROVADO!";
+            "âœ… PAGAMENTO APROVADO!";
     }
 
     const mensagem =
@@ -1055,12 +1128,12 @@ function mostrarPagamentoAprovado(
             dados.emailEnviado === true
                 ? `
                     <div class="email-sucesso">
-                        📧 O produto foi enviado para seu e-mail.
+                        ðŸ“§ O produto foi enviado para seu e-mail.
                     </div>
                 `
                 : `
                     <div class="email-processando">
-                        📧 O envio do e-mail está sendo processado.
+                        ðŸ“§ O envio do e-mail estÃ¡ sendo processado.
                     </div>
                 `;
 
@@ -1158,7 +1231,7 @@ document.addEventListener(
 );
 
 // ==========================================
-// INICIALIZAÇÃO
+// INICIALIZAÃ‡ÃƒO
 // ==========================================
 
 document.addEventListener(
@@ -1194,7 +1267,7 @@ document.addEventListener(
     }
 );
 /* =========================================================
-   PREÇOS PÚBLICOS — CARREGADOS DO SERVIDOR
+   PREÃ‡OS PÃšBLICOS â€” CARREGADOS DO SERVIDOR
 ========================================================= */
 
 async function carregarPrecosPublicos() {
@@ -1204,7 +1277,7 @@ async function carregarPrecosPublicos() {
         });
 
         if (!resposta.ok) {
-            throw new Error("Não foi possível carregar os preços.");
+            throw new Error("NÃ£o foi possÃ­vel carregar os preÃ§os.");
         }
 
         const dados = await resposta.json();
@@ -1213,7 +1286,7 @@ async function carregarPrecosPublicos() {
         const anual = Number(dados.anual);
 
         if (!Number.isFinite(mensal) || !Number.isFinite(anual)) {
-            throw new Error("Preços inválidos recebidos do servidor.");
+            throw new Error("PreÃ§os invÃ¡lidos recebidos do servidor.");
         }
 
         const formatar = valor =>
@@ -1222,7 +1295,7 @@ async function carregarPrecosPublicos() {
                 currency: "BRL"
             });
 
-        /* HERO — Nitro Mensal */
+        /* HERO â€” Nitro Mensal */
         const precoHero = document.querySelector(".hero-card-price strong");
 
         if (precoHero) {
@@ -1243,7 +1316,7 @@ async function carregarPrecosPublicos() {
             };
         }
 
-        /* PRODUTO — Nitro Mensal */
+        /* PRODUTO â€” Nitro Mensal */
         const cardMensal = document.querySelector(
             '.product-card[data-produto="nitro discord mensal"]'
         );
@@ -1268,7 +1341,7 @@ async function carregarPrecosPublicos() {
             }
         }
 
-        /* PRODUTO — Nitro Anual */
+        /* PRODUTO â€” Nitro Anual */
         const cardAnual = document.querySelector(
             '.product-card[data-produto="nitro discord anual"]'
         );
@@ -1294,7 +1367,7 @@ async function carregarPrecosPublicos() {
         }
 
         console.log(
-            "[HYPE STORE] Preços carregados:",
+            "[HYPE STORE] PreÃ§os carregados:",
             {
                 mensal,
                 anual
@@ -1303,10 +1376,11 @@ async function carregarPrecosPublicos() {
 
     } catch (erro) {
         console.error(
-            "[HYPE STORE] Erro ao carregar preços:",
+            "[HYPE STORE] Erro ao carregar preÃ§os:",
             erro
         );
     }
 }
 
 window.addEventListener("DOMContentLoaded", carregarPrecosPublicos);
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -2602,5 +2602,1299 @@ async function salvarPrecosAdmin() {
 document.addEventListener("DOMContentLoaded", function() {
     carregarEstoquePrecosAdmin();
 });
-</script></body>
+</script>
+<!-- HYPE-CHAT-ADMIN-PATCH -->
+
+<script>
+(function () {
+
+    console.log("[HYPE CHAT] Sistema de atendimento carregado.");
+
+    let hypeChatTicketSelecionado = null;
+    let hypeChatAtualizacao = null;
+
+    function hypeEscapar(valor) {
+        const div = document.createElement("div");
+        div.textContent = valor == null ? "" : String(valor);
+        return div.innerHTML;
+    }
+
+    function hypeData(valor) {
+        if (!valor) return "—";
+
+        const data = new Date(valor);
+
+        if (Number.isNaN(data.getTime())) {
+            return String(valor);
+        }
+
+        return data.toLocaleString("pt-BR", {
+            dateStyle: "short",
+            timeStyle: "short"
+        });
+    }
+
+    function hypeStatus(valor) {
+        const status = String(valor || "ABERTO")
+            .trim()
+            .toUpperCase();
+
+        if (status === "EM_ATENDIMENTO") {
+            return "Em atendimento";
+        }
+
+        if (status === "RESOLVIDO") {
+            return "Resolvido";
+        }
+
+        if (status === "FECHADO") {
+            return "Fechado";
+        }
+
+        return "Aberto";
+    }
+
+    function hypeStatusClasse(valor) {
+        const status = String(valor || "ABERTO")
+            .trim()
+            .toUpperCase();
+
+        if (status === "EM_ATENDIMENTO") {
+            return "status-atendimento";
+        }
+
+        if (
+            status === "RESOLVIDO" ||
+            status === "FECHADO"
+        ) {
+            return "status-resolvido";
+        }
+
+        return "status-aberto";
+    }
+
+    function hypeNormalizarStatus(valor) {
+        return String(valor || "ABERTO")
+            .trim()
+            .toUpperCase();
+    }
+
+    function hypeTicketFechado(ticket) {
+        return hypeNormalizarStatus(ticket && ticket.status) === "FECHADO";
+    }
+
+    function hypeObterId(ticket) {
+        return (
+            ticket?.id ||
+            ticket?.ticketId ||
+            ticket?._id ||
+            ""
+        );
+    }
+
+    function hypeObterMensagens(ticket) {
+        return Array.isArray(ticket?.mensagens)
+            ? ticket.mensagens
+            : [];
+    }
+
+    function hypeRenderizarMensagens(lista) {
+
+        const container =
+            document.getElementById("messages");
+
+        if (!container) return;
+
+        if (!Array.isArray(lista) || !lista.length) {
+
+            container.innerHTML = `
+                <div class="empty-tickets">
+                    <div class="empty-icon">💬</div>
+                    <h3>Nenhuma mensagem</h3>
+                    <p>
+                        Ainda não existem mensagens
+                        nesta conversa.
+                    </p>
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = lista.map(function (mensagem) {
+
+            const autor = String(
+                mensagem.autor ||
+                mensagem.remetente ||
+                mensagem.tipo ||
+                "cliente"
+            ).toLowerCase();
+
+            const admin =
+                autor === "admin" ||
+                autor === "administrador" ||
+                autor === "atendente";
+
+            const texto =
+                mensagem.texto ||
+                mensagem.mensagem ||
+                mensagem.conteudo ||
+                "";
+
+            const data =
+                mensagem.criadoEm ||
+                mensagem.createdAt ||
+                mensagem.data ||
+                "";
+
+            return `
+                <div class="message ${admin ? "admin" : ""}">
+
+                    <div class="message-author">
+                        ${admin ? "Você" : "Cliente"}
+                    </div>
+
+                    <div class="message-bubble">
+                        ${hypeEscapar(texto)}
+                    </div>
+
+                    <div class="message-time">
+                        ${hypeEscapar(hypeData(data))}
+                    </div>
+
+                </div>
+            `;
+
+        }).join("");
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function hypeAtualizarInterfaceFechado(fechado) {
+
+        const textarea =
+            document.getElementById("reply-text");
+
+        const botao =
+            document.querySelector("#reply-form .reply-button");
+
+        const status =
+            document.getElementById("ticket-status");
+
+        const fechar =
+            document.getElementById("btn-fechar-ticket");
+
+        if (textarea) {
+            textarea.disabled = fechado;
+
+            textarea.placeholder = fechado
+                ? "Este ticket está fechado."
+                : "Digite sua resposta...";
+        }
+
+        if (botao) {
+            botao.disabled = fechado;
+            botao.style.opacity = fechado ? "0.45" : "1";
+            botao.style.cursor = fechado
+                ? "not-allowed"
+                : "pointer";
+        }
+
+        if (status) {
+            status.disabled = fechado;
+        }
+
+        if (fechar) {
+            fechar.disabled = fechado;
+
+            if (fechado) {
+                fechar.textContent = "🔒 Ticket Fechado";
+            } else {
+                fechar.textContent = "🔒 Fechar Ticket";
+            }
+        }
+
+        const area =
+            document.querySelector(".reply-area");
+
+        if (area) {
+
+            let aviso =
+                document.getElementById(
+                    "hype-ticket-fechado-aviso"
+                );
+
+            if (fechado) {
+
+                if (!aviso) {
+
+                    aviso =
+                        document.createElement("div");
+
+                    aviso.id =
+                        "hype-ticket-fechado-aviso";
+
+                    aviso.style.cssText = `
+                        margin-top:10px;
+                        padding:10px 12px;
+                        border-radius:9px;
+                        background:rgba(239,68,68,.08);
+                        border:1px solid rgba(239,68,68,.18);
+                        color:#f87171;
+                        font-size:10px;
+                    `;
+
+                    aviso.textContent =
+                        "🔒 Este atendimento foi encerrado. O cliente não poderá enviar novas mensagens.";
+
+                    area.appendChild(aviso);
+                }
+
+            } else if (aviso) {
+
+                aviso.remove();
+            }
+        }
+    }
+
+    async function hypeCarregarTickets(silencioso = false) {
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets",
+                    {
+                        credentials: "same-origin",
+                        cache: "no-store"
+                    }
+                );
+
+            if (resposta.status === 401) {
+
+                if (typeof mostrarLogin === "function") {
+                    mostrarLogin();
+                }
+
+                return;
+            }
+
+            const dados =
+                await resposta.json().catch(() => ({}));
+
+            if (!resposta.ok) {
+                throw new Error(
+                    dados.mensagem ||
+                    dados.erro ||
+                    "Erro ao carregar tickets."
+                );
+            }
+
+            let tickets =
+                Array.isArray(dados)
+                    ? dados
+                    : (
+                        Array.isArray(dados.tickets)
+                            ? dados.tickets
+                            : []
+                    );
+
+            /*
+             * Mantemos o comportamento do painel:
+             * tickets fechados não aparecem na lista.
+             */
+            tickets = tickets.filter(function (ticket) {
+                return !hypeTicketFechado(ticket);
+            });
+
+            const lista =
+                document.getElementById("tickets-list");
+
+            if (!lista) return;
+
+            if (!tickets.length) {
+
+                lista.innerHTML = `
+                    <div class="empty-tickets">
+
+                        <div class="empty-icon">
+                            ✓
+                        </div>
+
+                        <h3>
+                            Nenhum ticket
+                        </h3>
+
+                        <p>
+                            Não existem atendimentos
+                            abertos no momento.
+                        </p>
+
+                    </div>
+                `;
+
+                return;
+            }
+
+            lista.innerHTML =
+                tickets.map(function (ticket) {
+
+                    const id =
+                        hypeObterId(ticket);
+
+                    const titulo =
+                        ticket.assunto ||
+                        ticket.titulo ||
+                        "Atendimento";
+
+                    const mensagens =
+                        hypeObterMensagens(ticket);
+
+                    const ultima =
+                        mensagens.length
+                            ? mensagens[mensagens.length - 1]
+                            : null;
+
+                    const preview =
+                        ultima
+                            ? (
+                                ultima.texto ||
+                                ultima.mensagem ||
+                                ""
+                            )
+                            : (
+                                ticket.mensagem ||
+                                "Sem mensagens"
+                            );
+
+                    const data =
+                        ticket.atualizadoEm ||
+                        ticket.criadoEm ||
+                        "";
+
+                    const ativo =
+                        hypeChatTicketSelecionado &&
+                        hypeObterId(
+                            hypeChatTicketSelecionado
+                        ) === id
+                            ? "active"
+                            : "";
+
+                    return `
+                        <div
+                            class="ticket-item ${ativo}"
+                            data-ticket-id="${hypeEscapar(id)}"
+                            onclick="hypeAbrirTicket('${hypeEscapar(id)}')"
+                        >
+
+                            <div class="ticket-top">
+
+                                <div class="ticket-title">
+                                    ${hypeEscapar(titulo)}
+                                </div>
+
+                                <div class="ticket-date">
+                                    ${hypeEscapar(
+                                        data
+                                            ? hypeData(data)
+                                            : ""
+                                    )}
+                                </div>
+
+                            </div>
+
+                            <div class="ticket-preview">
+                                ${hypeEscapar(preview)}
+                            </div>
+
+                            <div class="ticket-bottom">
+
+                                <span class="ticket-id">
+                                    #${hypeEscapar(id)}
+                                </span>
+
+                                <span class="status-badge ${hypeStatusClasse(ticket.status)}">
+                                    ${hypeEscapar(
+                                        hypeStatus(ticket.status)
+                                    )}
+                                </span>
+
+                            </div>
+
+                        </div>
+                    `;
+
+                }).join("");
+
+        } catch (erro) {
+
+            console.error(
+                "[HYPE CHAT] Erro ao carregar tickets:",
+                erro
+            );
+
+            if (!silencioso) {
+
+                const lista =
+                    document.getElementById("tickets-list");
+
+                if (lista) {
+
+                    lista.innerHTML = `
+                        <div class="empty-tickets">
+
+                            <div class="empty-icon">
+                                ⚠️
+                            </div>
+
+                            <h3>
+                                Erro ao carregar
+                            </h3>
+
+                            <p>
+                                ${hypeEscapar(
+                                    erro.message ||
+                                    "Não foi possível carregar os tickets."
+                                )}
+                            </p>
+
+                        </div>
+                    `;
+                }
+            }
+        }
+    }
+
+    async function hypeAbrirTicket(id) {
+
+        if (!id) return;
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id),
+                    {
+                        credentials: "same-origin",
+                        cache: "no-store"
+                    }
+                );
+
+            if (resposta.status === 401) {
+
+                if (typeof mostrarLogin === "function") {
+                    mostrarLogin();
+                }
+
+                return;
+            }
+
+            const dados =
+                await resposta.json().catch(() => ({}));
+
+            if (!resposta.ok) {
+                throw new Error(
+                    dados.mensagem ||
+                    dados.erro ||
+                    "Não foi possível abrir o ticket."
+                );
+            }
+
+            const ticket =
+                dados.ticket ||
+                dados;
+
+            hypeChatTicketSelecionado =
+                ticket;
+
+            const vazio =
+                document.getElementById(
+                    "conversation-empty"
+                );
+
+            const conteudo =
+                document.getElementById(
+                    "conversation-content"
+                );
+
+            if (vazio) {
+                vazio.classList.add("hidden");
+            }
+
+            if (conteudo) {
+                conteudo.classList.remove("hidden");
+            }
+
+            const titulo =
+                document.getElementById("ticket-title");
+
+            const info =
+                document.getElementById("ticket-info");
+
+            if (titulo) {
+
+                titulo.textContent =
+                    ticket.assunto ||
+                    ticket.titulo ||
+                    "Atendimento";
+            }
+
+            if (info) {
+
+                info.textContent =
+                    (
+                        ticket.nome ||
+                        ticket.cliente ||
+                        "Cliente"
+                    ) +
+                    " • " +
+                    (
+                        ticket.email ||
+                        "sem email"
+                    ) +
+                    " • #" +
+                    hypeObterId(ticket);
+            }
+
+            const status =
+                hypeNormalizarStatus(ticket.status);
+
+            const select =
+                document.getElementById("ticket-status");
+
+            if (select) {
+
+                if (
+                    status === "ABERTO" ||
+                    status === "EM_ATENDIMENTO" ||
+                    status === "RESOLVIDO"
+                ) {
+                    select.value =
+                        status.toLowerCase();
+                }
+            }
+
+            hypeRenderizarMensagens(
+                hypeObterMensagens(ticket)
+            );
+
+            hypeAtualizarInterfaceFechado(
+                status === "FECHADO"
+            );
+
+            const respostaCampo =
+                document.getElementById("reply-message");
+
+            if (respostaCampo) {
+                respostaCampo.textContent = "";
+            }
+
+        } catch (erro) {
+
+            console.error(
+                "[HYPE CHAT] Erro ao abrir ticket:",
+                erro
+            );
+
+            const respostaCampo =
+                document.getElementById("reply-message");
+
+            if (respostaCampo) {
+                respostaCampo.textContent =
+                    erro.message ||
+                    "Erro ao abrir ticket.";
+            }
+        }
+    }
+
+    async function hypeResponderTicket() {
+
+        if (!hypeChatTicketSelecionado) {
+
+            const aviso =
+                document.getElementById("reply-message");
+
+            if (aviso) {
+                aviso.textContent =
+                    "Selecione um ticket primeiro.";
+            }
+
+            return;
+        }
+
+        if (
+            hypeTicketFechado(
+                hypeChatTicketSelecionado
+            )
+        ) {
+
+            const aviso =
+                document.getElementById("reply-message");
+
+            if (aviso) {
+                aviso.textContent =
+                    "Este ticket está fechado.";
+            }
+
+            hypeAtualizarInterfaceFechado(true);
+
+            return;
+        }
+
+        const textarea =
+            document.getElementById("reply-text");
+
+        const aviso =
+            document.getElementById("reply-message");
+
+        const texto =
+            textarea
+                ? textarea.value.trim()
+                : "";
+
+        if (!texto) {
+
+            if (aviso) {
+                aviso.textContent =
+                    "Digite uma mensagem.";
+            }
+
+            return;
+        }
+
+        if (aviso) {
+            aviso.textContent =
+                "Enviando...";
+        }
+
+        try {
+
+            const id =
+                hypeObterId(
+                    hypeChatTicketSelecionado
+                );
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/mensagens",
+                    {
+                        method: "POST",
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            texto,
+                            mensagem: texto
+                        })
+                    }
+                );
+
+            const dados =
+                await resposta.json().catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    dados.erro ||
+                    "Não foi possível enviar a resposta."
+                );
+            }
+
+            if (textarea) {
+                textarea.value = "";
+            }
+
+            if (aviso) {
+                aviso.textContent =
+                    "Mensagem enviada.";
+            }
+
+            await hypeAbrirTicket(id);
+
+            await hypeCarregarTickets(true);
+
+            setTimeout(function () {
+
+                if (aviso) {
+                    aviso.textContent = "";
+                }
+
+            }, 2000);
+
+        } catch (erro) {
+
+            console.error(
+                "[HYPE CHAT] Erro ao responder:",
+                erro
+            );
+
+            if (aviso) {
+                aviso.textContent =
+                    erro.message ||
+                    "Erro ao enviar mensagem.";
+            }
+        }
+    }
+
+    async function hypeAlterarStatus() {
+
+        if (!hypeChatTicketSelecionado) {
+            return;
+        }
+
+        if (
+            hypeTicketFechado(
+                hypeChatTicketSelecionado
+            )
+        ) {
+            return;
+        }
+
+        const select =
+            document.getElementById("ticket-status");
+
+        if (!select) return;
+
+        const novoStatus =
+            String(select.value || "aberto")
+                .toUpperCase();
+
+        const id =
+            hypeObterId(
+                hypeChatTicketSelecionado
+            );
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/status",
+                    {
+                        method: "PATCH",
+                        credentials: "same-origin",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            status: novoStatus
+                        })
+                    }
+                );
+
+            const dados =
+                await resposta.json().catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    dados.erro ||
+                    "Não foi possível alterar o status."
+                );
+            }
+
+            hypeChatTicketSelecionado.status =
+                novoStatus;
+
+            hypeAtualizarInterfaceFechado(false);
+
+            await hypeCarregarTickets(true);
+
+            await hypeAbrirTicket(id);
+
+        } catch (erro) {
+
+            alert(
+                erro.message ||
+                "Erro ao alterar status."
+            );
+        }
+    }
+
+    async function hypeFecharTicket() {
+
+        if (!hypeChatTicketSelecionado) {
+
+            alert(
+                "Selecione um ticket primeiro."
+            );
+
+            return;
+        }
+
+        const id =
+            hypeObterId(
+                hypeChatTicketSelecionado
+            );
+
+        if (!confirm(
+            "Deseja realmente fechar este ticket?\n\nDepois de fechado, o cliente não poderá enviar novas mensagens."
+        )) {
+            return;
+        }
+
+        try {
+
+            const resposta =
+                await fetch(
+                    "/api/admin/tickets/" +
+                    encodeURIComponent(id) +
+                    "/fechar",
+                    {
+                        method: "PATCH",
+                        credentials: "same-origin",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({})
+                    }
+                );
+
+            const dados =
+                await resposta.json().catch(() => ({}));
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    dados.mensagem ||
+                    dados.erro ||
+                    "Não foi possível fechar o ticket."
+                );
+            }
+
+            /*
+             * IMPORTANTE:
+             * Não reabrimos o ticket.
+             */
+            hypeChatTicketSelecionado = null;
+
+            const vazio =
+                document.getElementById(
+                    "conversation-empty"
+                );
+
+            const conteudo =
+                document.getElementById(
+                    "conversation-content"
+                );
+
+            if (conteudo) {
+                conteudo.classList.add("hidden");
+            }
+
+            if (vazio) {
+                vazio.classList.remove("hidden");
+            }
+
+            const textarea =
+                document.getElementById("reply-text");
+
+            if (textarea) {
+                textarea.value = "";
+            }
+
+            const messages =
+                document.getElementById("messages");
+
+            if (messages) {
+                messages.innerHTML = "";
+            }
+
+            await hypeCarregarTickets(true);
+
+        } catch (erro) {
+
+            console.error(
+                "[HYPE CHAT] Erro ao fechar:",
+                erro
+            );
+
+            alert(
+                erro.message ||
+                "Erro ao fechar ticket."
+            );
+        }
+    }
+
+    /*
+     * Substitui as funções antigas usadas pelos
+     * botões do HTML.
+     */
+    window.abrirTicketAdmin =
+        hypeAbrirTicket;
+
+    window.responderTicket =
+        hypeResponderTicket;
+
+    window.alterarStatus =
+        hypeAlterarStatus;
+
+    window.fecharTicket =
+        hypeFecharTicket;
+
+    window.carregarTickets =
+        hypeCarregarTickets;
+
+    /*
+     * Alias usado pelo novo HTML dos tickets.
+     */
+    window.hypeAbrirTicket =
+        hypeAbrirTicket;
+
+    /*
+     * Substitui o submit antigo.
+     */
+    const formulario =
+        document.getElementById("reply-form");
+
+    if (formulario) {
+
+        formulario.addEventListener(
+            "submit",
+            function (event) {
+
+                event.preventDefault();
+
+                hypeResponderTicket();
+            }
+        );
+    }
+
+    const textarea =
+        document.getElementById("reply-text");
+
+    if (textarea) {
+
+        textarea.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
+
+                    event.preventDefault();
+
+                    hypeResponderTicket();
+                }
+            }
+        );
+    }
+
+    /*
+     * Atualização automática da conversa.
+     * Não recarrega a página.
+     */
+    if (hypeChatAtualizacao) {
+        clearInterval(hypeChatAtualizacao);
+    }
+
+    hypeChatAtualizacao =
+        setInterval(
+            async function () {
+
+                if (!hypeChatTicketSelecionado) {
+                    return;
+                }
+
+                try {
+
+                    const id =
+                        hypeObterId(
+                            hypeChatTicketSelecionado
+                        );
+
+                    const resposta =
+                        await fetch(
+                            "/api/admin/tickets/" +
+                            encodeURIComponent(id),
+                            {
+                                credentials:
+                                    "same-origin",
+                                cache: "no-store"
+                            }
+                        );
+
+                    if (!resposta.ok) {
+                        return;
+                    }
+
+                    const dados =
+                        await resposta.json();
+
+                    const ticket =
+                        dados.ticket ||
+                        dados;
+
+                    /*
+                     * Se o cliente/admin fechou,
+                     * o chat fica bloqueado.
+                     */
+                    hypeChatTicketSelecionado =
+                        ticket;
+
+                    hypeRenderizarMensagens(
+                        hypeObterMensagens(ticket)
+                    );
+
+                    hypeAtualizarInterfaceFechado(
+                        hypeTicketFechado(ticket)
+                    );
+
+                    if (hypeTicketFechado(ticket)) {
+
+                        await hypeCarregarTickets(true);
+
+                    }
+
+                } catch (erro) {
+
+                    console.error(
+                        "[HYPE CHAT] Atualização:",
+                        erro
+                    );
+                }
+
+            },
+            4000
+        );
+
+    /*
+     * Depois do login, se a consulta estiver ativa,
+     * o painel pode continuar sendo atualizado.
+     */
+    const antigoConsultar =
+        window.consultarTickets;
+
+    window.consultarTickets =
+        async function () {
+
+            try {
+
+                await hypeCarregarTickets();
+
+                if (
+                    typeof antigoConsultar ===
+                    "function"
+                ) {
+                    /*
+                     * Não chamamos o antigo método
+                     * para evitar dois intervalos.
+                     */
+                }
+
+            } catch (erro) {
+
+                console.error(erro);
+            }
+        };
+
+    console.log(
+        "[HYPE CHAT] Cliente ↔ Admin pronto."
+    );
+
+})();
+</script>
+
+<!-- HYPE-KEEP-CONVERSATION-OPEN -->
+<style>
+#conversation-content.keep-open-after-close {
+    display: flex !important;
+}
+
+#conversation-content.keep-open-after-close.hidden {
+    display: flex !important;
+}
+</style>
+
+<script>
+(function () {
+    function manterAtendimentoAberto() {
+        const conteudo = document.getElementById("conversation-content");
+        const vazio = document.getElementById("conversation-empty");
+
+        if (!conteudo) return;
+
+        conteudo.classList.add("keep-open-after-close");
+
+        if (vazio) {
+            vazio.classList.add("hidden");
+        }
+
+        conteudo.style.display = "flex";
+    }
+
+    function observarFechamento() {
+        const botao = document.getElementById("btn-fechar-ticket");
+
+        if (!botao || botao.dataset.keepOpenPatched === "1") return;
+
+        botao.dataset.keepOpenPatched = "1";
+
+        botao.addEventListener("click", function () {
+            setTimeout(function () {
+                manterAtendimentoAberto();
+            }, 100);
+            
+            setTimeout(function () {
+                manterAtendimentoAberto();
+            }, 500);
+
+            setTimeout(function () {
+                manterAtendimentoAberto();
+            }, 1000);
+        });
+    }
+
+    const observer = new MutationObserver(function () {
+        observarFechamento();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    observarFechamento();
+
+    window.addEventListener("load", function () {
+        observarFechamento();
+    });
+})();
+</script>
+<!-- HYPE-REMOVE-DUPLICATE-SEND-FINAL -->
+<script>
+(function () {
+
+    function corrigirEnvioDuplicado() {
+
+        const formularioOriginal = document.getElementById("reply-form");
+        const textareaOriginal = document.getElementById("reply-text");
+
+        if (!formularioOriginal || !textareaOriginal) {
+            console.log("[HYPE] Formulario de resposta ainda nao encontrado.");
+            return;
+        }
+
+        /*
+         * CLONAR remove todos os addEventListener antigos
+         * existentes nesses elementos.
+         */
+
+        const formularioNovo = formularioOriginal.cloneNode(true);
+        formularioOriginal.replaceWith(formularioNovo);
+
+        const textareaNovo = formularioNovo.querySelector("#reply-text");
+
+        if (!textareaNovo) {
+            console.log("[HYPE] Textarea de resposta nao encontrado.");
+            return;
+        }
+
+        /*
+         * Garante que qualquer listener antigo do textarea
+         * tambem seja removido.
+         */
+
+        const textareaLimpo = textareaNovo.cloneNode(true);
+        textareaNovo.replaceWith(textareaLimpo);
+
+        /*
+         * UM UNICO envio pelo formulario.
+         */
+
+        formularioNovo.addEventListener("submit", function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            if (
+                typeof window.hypeResponderTicket === "function"
+            ) {
+                window.hypeResponderTicket();
+            }
+            else if (
+                typeof window.responderTicket === "function"
+            ) {
+                window.responderTicket();
+            }
+
+        });
+
+        /*
+         * ENTER envia apenas uma vez.
+         * SHIFT + ENTER continua permitindo quebra de linha.
+         */
+
+        textareaLimpo.addEventListener("keydown", function (event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                if (
+                    typeof window.hypeResponderTicket === "function"
+                ) {
+                    window.hypeResponderTicket();
+                }
+                else if (
+                    typeof window.responderTicket === "function"
+                ) {
+                    window.responderTicket();
+                }
+
+            }
+
+        });
+
+        console.log(
+            "%c[HYPE] DUPLICACAO DE MENSAGENS CORRIGIDA.",
+            "color:#a855f7;font-weight:bold;"
+        );
+
+    }
+
+    /*
+     * Espera o painel carregar.
+     */
+
+    if (document.readyState === "loading") {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            corrigirEnvioDuplicado,
+            { once: true }
+        );
+
+    } else {
+
+        corrigirEnvioDuplicado();
+
+    }
+
+})();
+</script>
+<!-- FIM HYPE-REMOVE-DUPLICATE-SEND-FINAL -->
+</body>
 </html>
+
+
+

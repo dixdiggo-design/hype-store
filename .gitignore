@@ -2,3 +2,12 @@
 node_modules/
 chaves.json
 tickets.json
+
+.env
+index-backup-*.html
+server-backup-*.js
+index-bugado-*.html
+index-com-erro-*.html
+server.before-*.js
+diagnostico-admin.txt
+atualizar-tickets.js
