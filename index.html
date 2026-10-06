@@ -11035,3 +11035,26 @@ window.hypePegarTicket=pegarTicket;
 
 })();
 </script>
+<style>
+.hype-bg-symbols{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.hype-bg-symbols span{position:absolute;color:#fff;opacity:.16;font-size:22px;animation:hypeSymbolFloat linear infinite}
+.hype-bg-symbols span:nth-child(1){left:8%;top:90%;animation-duration:12s}
+.hype-bg-symbols span:nth-child(2){left:20%;top:70%;animation-duration:16s;font-size:30px}
+.hype-bg-symbols span:nth-child(3){left:35%;top:95%;animation-duration:13s}
+.hype-bg-symbols span:nth-child(4){left:50%;top:80%;animation-duration:18s;font-size:26px}
+.hype-bg-symbols span:nth-child(5){left:65%;top:92%;animation-duration:14s}
+.hype-bg-symbols span:nth-child(6){left:78%;top:75%;animation-duration:17s;font-size:32px}
+.hype-bg-symbols span:nth-child(7){left:90%;top:95%;animation-duration:15s}
+.hype-bg-symbols span:nth-child(8){left:45%;top:65%;animation-duration:20s;font-size:18px}
+@keyframes hypeSymbolFloat{
+0%{transform:translateY(0) rotate(0deg);opacity:0}
+15%{opacity:.16}
+50%{transform:translateY(-55vh) rotate(180deg);opacity:.22}
+85%{opacity:.12}
+100%{transform:translateY(-110vh) rotate(360deg);opacity:0}
+}
+</style>
+<div class="hype-bg-symbols">
+<span>✦</span><span>◆</span><span>✧</span><span>◇</span>
+<span>✦</span><span>◆</span><span>✧</span><span>◇</span>
+</div>
