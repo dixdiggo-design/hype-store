@@ -2023,68 +2023,85 @@ app.post("/api/tickets", (req, res) => {
    CLIENTE - CONSULTAR TICKET
 ========================================================= */
 
-app.get(
-    "/api/tickets/:id",
-    (req, res) => {
-        impedirCachePrivado(res);
+/* =========================================================
+   CLIENTE - CONSULTAR TICKET
+========================================================= */
 
-        try {
-            const id = String(
-                req.params.id || ""
-            ).trim();
+app.get("/api/tickets/:id", (req, res) => {
+    impedirCachePrivado(res);
 
-            const token = String(
-                req.query.token || ""
-            ).trim();
+    try {
+        const id = String(req.params.id || "").trim();
+        const token = String(req.query.token || "").trim();
 
-            if (!token) {
-                return res.status(401).json({
-                    sucesso: false,
-                    erro: "Token do ticket nÃ£o informado."
-                });
-            }
-
-            const tickets = lerTickets();
-
-            const ticket = tickets.find(
-                item => String(item.id) === id
-            );
-
-            if (!ticket) {
-                return res.status(404).json({
-                    sucesso: false,
-                    erro: "Ticket nÃ£o encontrado."
-                });
-            }
-
-            if (
-                !ticket.token ||
-                ticket.token !== token
-            ) {
-                return res.status(401).json({
-                    sucesso: false,
-                    erro: "Acesso negado."
-                });
-            }
-
-            res.json({
-                sucesso: true,
-                ticket: prepararTicketPublico(ticket)
-            });
-        } catch (erro) {
-            console.error(
-                "Erro ao consultar ticket:",
-                erro
-            );
-
-            res.status(500).json({
+        if (!id || !token) {
+            return res.status(401).json({
                 sucesso: false,
-                erro: "Erro interno ao consultar ticket."
+                erro: "Dados do atendimento incompletos."
             });
         }
-    }
-);
 
+        const tickets = lerTickets();
+
+        const ticket = tickets.find(
+            item => String(item.id || "").trim() === id
+        );
+
+        if (!ticket) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: "Atendimento não encontrado.",
+                encontrado: false
+            });
+        }
+
+        if (
+            !ticket.token ||
+            String(ticket.token).trim() !== token
+        ) {
+            return res.status(401).json({
+                sucesso: false,
+                erro: "Token do atendimento inválido.",
+                encontrado: false
+            });
+        }
+
+        const publico = prepararTicketPublico(ticket);
+
+        return res.json({
+            sucesso: true,
+            encontrado: true,
+
+            /* formato antigo */
+            ticket: publico,
+
+            /* formato compatível com o chat atual */
+            id: publico.id,
+            nome: publico.nome,
+            email: publico.email,
+            discord: publico.discord,
+            assunto: publico.assunto,
+            status: publico.status,
+            criadoEm: publico.criadoEm,
+            atualizadoEm: publico.atualizadoEm,
+            mensagens: Array.isArray(publico.mensagens)
+                ? publico.mensagens
+                : []
+        });
+
+    } catch (erro) {
+        console.error("Erro ao consultar ticket:", erro);
+
+        return res.status(500).json({
+            sucesso: false,
+            erro: "Erro interno ao consultar atendimento."
+        });
+    }
+});
+
+/* =========================================================
+   CLIENTE - ENVIAR MENSAGEM
+========================================================= */
 /* =========================================================
    CLIENTE - ENVIAR MENSAGEM
 ========================================================= */
@@ -2812,6 +2829,9 @@ app.listen(PORT, () => {
     console.log("======================================");
     console.log("");
 });
+
+
+
 
 
 
