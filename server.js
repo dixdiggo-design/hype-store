@@ -2863,3 +2863,5 @@ app.listen(PORT, () => {
 
 
 
+
+console.log('========== CONFIGURAÇÃO DO SERVIDOR =========='); console.log('DISCORD_BOT_TOKEN:', process.env.DISCORD_BOT_TOKEN ? 'CONFIGURADO' : 'NAO CONFIGURADO'); console.log('EMAIL_USUARIO:', process.env.EMAIL_USUARIO ? 'CONFIGURADO' : 'NAO CONFIGURADO'); console.log('EMAIL_SENHA_APP:', process.env.EMAIL_SENHA_APP ? 'CONFIGURADO' : 'NAO CONFIGURADO'); console.log('===============================================');
