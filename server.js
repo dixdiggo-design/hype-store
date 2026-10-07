@@ -1260,43 +1260,34 @@ app.get("/api/pedidos/:id", (req, res) => {
 
 app.post("/api/pagamento/pix", async (req, res) => {
     try {
-        const {
-            pedidoId,
-            valor,
-            produto,
-            opcao
-        } = req.body || {};
+        const { pedidoId, valor, produto, opcao } = req.body || {};
+
+        console.log("========== CRIAR PIX ==========");
+        console.log("PEDIDO:", pedidoId);
+        console.log("VALOR:", valor);
+        console.log("PRODUTO:", produto);
+        console.log("OPCAO:", opcao);
 
         if (!pedidoId) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "pedidoId Ã© obrigatÃ³rio."
+                erro: "pedidoId é obrigatório."
             });
         }
 
-        if (
-            !TURBOFY_CLIENT_ID ||
-            !TURBOFY_CLIENT_SECRET
-        ) {
+        if (!TURBOFY_CLIENT_ID || !TURBOFY_CLIENT_SECRET) {
             return res.status(500).json({
                 sucesso: false,
-                erro: "Credenciais da TurbofyPay nÃ£o configuradas."
+                erro: "Credenciais da TurbofyPay não configuradas."
             });
         }
 
         const valorNumerico = Number(valor);
 
-        if (!Number.isFinite(valorNumerico)) {
+        if (!Number.isFinite(valorNumerico) || valorNumerico < 0.50) {
             return res.status(400).json({
                 sucesso: false,
-                erro: "Valor invÃ¡lido."
-            });
-        }
-
-        if (valorNumerico < 0.50) {
-            return res.status(400).json({
-                sucesso: false,
-                erro: "O valor mÃ­nimo do pagamento Ã© R$ 1,50"
+                erro: "Valor inválido ou abaixo de R$ 0,50."
             });
         }
 
@@ -1305,47 +1296,40 @@ app.post("/api/pagamento/pix", async (req, res) => {
         if (!pedido) {
             return res.status(404).json({
                 sucesso: false,
-                erro: "Pedido nÃ£o encontrado."
+                erro: "Pedido não encontrado."
             });
         }
 
-        const amountCents = Math.round(
-            valorNumerico * 100
-        );
+        const amountCents = Math.round(valorNumerico * 100);
+        const idempotencyKey = `${pedidoId}-${Date.now()}`;
 
-        const idempotencyKey =
-            `${pedidoId}-${Date.now()}`;
+        const descricao =
+            `Pedido ${pedidoId} - ${produto || pedido.produto || "Produto"} ${opcao || pedido.opcao || ""}`.trim();
+
+        console.log("AMOUNT CENTS:", amountCents);
+        console.log("DESCRICAO:", descricao);
+        console.log("IDEMPOTENCY:", idempotencyKey);
 
         const resposta = await fetch(
             `${TURBOFY_API}/sellers/pix`,
             {
                 method: "POST",
-
                 headers: {
                     "Content-Type": "application/json",
+                    "Accept": "application/json",
                     "x-client-id": TURBOFY_CLIENT_ID,
                     "x-client-secret": TURBOFY_CLIENT_SECRET,
                     "x-idempotency-key": idempotencyKey
                 },
-
                 body: JSON.stringify({
-                    amountCents,
-
-                    description:
-                        `Pedido ${pedidoId} - ${produto || pedido.produto} ${opcao || pedido.opcao || ""}`,
-
-                    externalRef: pedidoId,
-
-                    metadata: {
-                        pedidoId,
-                        produto: produto || pedido.produto,
-                        opcao: opcao || pedido.opcao || ""
-                    }
+                    amountCents: amountCents,
+                    description: descricao,
+                    externalRef: String(pedidoId)
                 })
             }
         );
 
-        const texto = await resposta.text(); console.log("========== TURBOFY STATUS DEBUG =========="); console.log("CHARGE ID:", chargeId); console.log("STATUS HTTP:", resposta.status); console.log("RESPOSTA STATUS COMPLETA:", texto); console.log("==========================================");
+        const texto = await resposta.text();
 
         let dados;
 
@@ -1357,63 +1341,76 @@ app.post("/api/pagamento/pix", async (req, res) => {
             };
         }
 
+        console.log("STATUS TURBOFY:", resposta.status);
+        console.log(
+            "RESPOSTA TURBOFY:",
+            JSON.stringify(dados, null, 2)
+        );
+
         if (!resposta.ok) {
+            const mensagem =
+                dados?.message ||
+                dados?.error?.message ||
+                dados?.error ||
+                dados?.erro?.message ||
+                dados?.erro ||
+                "Erro ao criar pagamento PIX.";
+
             console.error(
-                "Erro TurbofyPay:",
-                resposta.status,
-                dados
+                "ERRO TURBOFY:",
+                JSON.stringify(dados, null, 2)
             );
 
             return res.status(resposta.status).json({
                 sucesso: false,
-                erro:
-                    dados?.message ||
-                    dados?.error ||
-                    "Erro ao criar pagamento.",
+                erro: mensagem,
                 detalhes: dados
             });
         }
 
-        console.log("RESPOSTA TURBOFY COMPLETA:", JSON.stringify(dados, null, 2));
-
         const chargeId =
-            dados.chargeId ||
-            dados.id ||
-            dados.charge?.id ||
-            dados.data?.chargeId ||
-            dados.data?.id;
+            dados?.id ||
+            dados?.chargeId ||
+            dados?.charge?.id ||
+            dados?.data?.id ||
+            dados?.data?.chargeId;
 
         const copyPaste =
-            dados.pix?.copyPaste ||
-            dados.copyPaste ||
-            dados.pixCopyPaste ||
-            dados.data?.pix?.copyPaste ||
+            dados?.pix?.copyPaste ||
+            dados?.copyPaste ||
+            dados?.data?.pix?.copyPaste ||
+            dados?.data?.copyPaste ||
             "";
 
         const qrCode =
-            dados.pix?.qrCode ||
-            dados.qrCode ||
-            dados.pix?.qr_code ||
-            dados.qr_code ||
-            dados.data?.pix?.qrCode ||
-            dados.data?.qrCode ||
+            dados?.pix?.qrCode ||
+            dados?.qrCode ||
+            dados?.data?.pix?.qrCode ||
+            dados?.data?.qrCode ||
             "";
 
         const expiresAt =
-            dados.expiresAt ||
-            dados.pix?.expiresAt ||
-            dados.data?.expiresAt ||
+            dados?.pix?.expiresAt ||
+            dados?.expiresAt ||
+            dados?.data?.expiresAt ||
             null;
+
+        const status =
+            String(
+                dados?.status ||
+                dados?.data?.status ||
+                "PENDING"
+            ).toUpperCase();
 
         if (!chargeId) {
             console.error(
-                "TurbofyPay nÃ£o retornou chargeId:",
-                dados
+                "TURBOFY NÃO RETORNOU ID:",
+                JSON.stringify(dados, null, 2)
             );
 
             return res.status(500).json({
                 sucesso: false,
-                erro: "A TurbofyPay nÃ£o retornou o ID da cobranÃ§a.",
+                erro: "A TurbofyPay não retornou o ID da cobrança.",
                 detalhes: dados
             });
         }
@@ -1421,40 +1418,44 @@ app.post("/api/pagamento/pix", async (req, res) => {
         atualizarPedido(
             pedidoId,
             {
-                chargeId,
-                copyPaste,
-                qrCode,
-                expiresAt,
+                chargeId: chargeId,
+                copyPaste: copyPaste,
+                qrCode: qrCode,
+                expiresAt: expiresAt,
                 valor: valorNumerico,
-                statusPagamento: "PENDING",
+                statusPagamento: status,
                 status: "AGUARDANDO_PAGAMENTO",
                 atualizadoEm: new Date().toISOString()
             }
         );
 
-        res.json({
+        console.log("PIX CRIADO COM SUCESSO:", chargeId);
+
+        console.log("==============================");
+
+        return res.json({
             sucesso: true,
-            pedidoId,
-            chargeId,
-            copyPaste,
-            qrCode,
-            expiresAt,
-            status: "PENDING"
+            pedidoId: pedidoId,
+            chargeId: chargeId,
+            copyPaste: copyPaste,
+            qrCode: qrCode,
+            expiresAt: expiresAt,
+            status: status
         });
+
     } catch (erro) {
         console.error(
-            "Erro ao criar PIX:",
+            "ERRO INTERNO AO CRIAR PIX:",
             erro
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             sucesso: false,
             erro: "Erro interno ao criar pagamento PIX.",
             detalhes: erro.message
         });
     }
 });
-
 /* =========================================================
    TURBOFYPAY - CONSULTAR PAGAMENTO
 ========================================================= */
@@ -2829,6 +2830,7 @@ app.listen(PORT, () => {
     console.log("======================================");
     console.log("");
 });
+
 
 
 
