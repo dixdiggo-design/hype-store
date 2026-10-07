@@ -11179,3 +11179,201 @@ window.addEventListener("load",function(){
 
 })();
 </script>
+<script>
+/* ===== HYPE - DESATIVA CHATS ANTIGOS ===== */
+(function(){
+    "use strict";
+
+    const antigo = [
+        "carregarTicket",
+        "atualizarMensagens",
+        "atualizar",
+        "iniciarAtualizacao",
+        "iniciarPolling"
+    ];
+
+    antigo.forEach(function(nome){
+        try{
+            if(typeof window[nome] === "function"){
+                window[nome] = function(){ return false; };
+            }
+        }catch(e){}
+    });
+
+    console.log("[HYPE] Sistemas antigos de atendimento desativados.");
+})();
+</script>
+
+<script id="hype-precos-dinamicos">
+(function () {
+    "use strict";
+
+    const HYPE_PRECOS_URL = "/api/precos";
+
+    function dinheiro(valor) {
+        return Number(valor || 0).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+        });
+    }
+
+    async function carregarPrecosHype() {
+        try {
+            const resposta = await fetch(
+                HYPE_PRECOS_URL + "?t=" + Date.now(),
+                {
+                    method: "GET",
+                    cache: "no-store"
+                }
+            );
+
+            if (!resposta.ok) {
+                throw new Error("Não foi possível carregar os preços.");
+            }
+
+            const dados = await resposta.json();
+
+            if (!dados || !dados.sucesso) {
+                throw new Error("API de preços inválida.");
+            }
+
+            const mensal = Number(dados.mensal);
+            const anual = Number(dados.anual);
+
+            if (!Number.isFinite(mensal) || mensal <= 0) {
+                throw new Error("Preço mensal inválido.");
+            }
+
+            if (!Number.isFinite(anual) || anual <= 0) {
+                throw new Error("Preço anual inválido.");
+            }
+
+            window.HYPE_PRECOS = {
+                mensal: mensal,
+                anual: anual
+            };
+
+            /*
+             * ATUALIZA OS PREÇOS VISÍVEIS
+             */
+
+            document
+                .querySelectorAll(".produto-card")
+                .forEach(function (card) {
+
+                    const produto = String(
+                        card.getAttribute("data-produto") || ""
+                    ).trim();
+
+                    const preco = produto === "Nitro Discord Anual"
+                        ? anual
+                        : produto === "Nitro Discord Mensal"
+                            ? mensal
+                            : null;
+
+                    if (preco === null) return;
+
+                    const elemento = card.querySelector(
+                        ".produto-preco strong"
+                    );
+
+                    if (elemento) {
+                        elemento.textContent = dinheiro(preco);
+                    }
+
+                    const botao = card.querySelector(
+                        ".produto-comprar"
+                    );
+
+                    if (botao) {
+                        botao.setAttribute(
+                            "onclick",
+                            "adicionarCarrinho('" +
+                            produto.replace(/'/g, "\\'") +
+                            "', " +
+                            preco +
+                            ", '" +
+                            (produto === "Nitro Discord Anual"
+                                ? "Anual"
+                                : "Mensal") +
+                            "')"
+                        );
+                    }
+                });
+
+            /*
+             * ATUALIZA O CARD DE DESTAQUE DO NITRO
+             */
+
+            document
+                .querySelectorAll(".nitro-feature")
+                .forEach(function (card) {
+
+                    const texto = card.querySelector(
+                        ".nitro-price strong"
+                    );
+
+                    if (texto) {
+                        texto.textContent = dinheiro(mensal);
+                    }
+
+                    const botao = card.querySelector(
+                        "button"
+                    );
+
+                    if (botao) {
+                        const onclick =
+                            String(
+                                botao.getAttribute("onclick") || ""
+                            );
+
+                        if (
+                            onclick.includes(
+                                "Nitro Discord Mensal"
+                            )
+                        ) {
+                            botao.setAttribute(
+                                "onclick",
+                                "adicionarCarrinho('Nitro Discord Mensal', " +
+                                mensal +
+                                ", 'Mensal')"
+                            );
+                        }
+                    }
+                });
+
+            console.log(
+                "[HYPE PREÇOS] Preços carregados:",
+                window.HYPE_PRECOS
+            );
+
+        } catch (erro) {
+
+            console.error(
+                "[HYPE PREÇOS] Erro:",
+                erro
+            );
+
+        }
+    }
+
+    /*
+     * Carrega depois que o HTML estiver pronto.
+     */
+
+    if (document.readyState === "loading") {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarPrecosHype
+        );
+
+    } else {
+
+        carregarPrecosHype();
+
+    }
+
+})();
+</script>
+
