@@ -303,182 +303,89 @@ function fecharCheckout() {
 // ==========================================
 
 async function gerarPagamentoPix() {
-    const nomeInput =
-        document.getElementById("nome");
 
-    const discordInput =
-        document.getElementById("discord");
-
-    const emailInput =
-        document.getElementById("email");
-
-    const botao =
-        document.getElementById("btn-pagar-pix");
-
-    if (!nomeInput || !discordInput || !emailInput) {
-        console.error(
-            "Campos do checkout nÃ£o encontrados."
-        );
-
-        alert(
-            "Erro no formulÃ¡rio de checkout."
-        );
-
+    if (
+        !Array.isArray(carrinho) ||
+        carrinho.length === 0
+    ) {
+        alert("Seu carrinho está vazio.");
         return;
     }
 
+    const elementoNome =
+        document.getElementById("nome");
+
+    const elementoDiscord =
+        document.getElementById("discord");
+
+    const elementoEmail =
+        document.getElementById("email");
+
     const nome =
-        nomeInput.value.trim();
+        String(elementoNome?.value ?? "").trim();
 
     const discord =
-        discordInput.value.trim();
+        String(elementoDiscord?.value ?? "").trim();
 
     const email =
-        emailInput.value.trim();
-
-    // ==========================================
-    // VALIDAÃ‡ÃƒO
-    // ==========================================
+        String(elementoEmail?.value ?? "").trim();
 
     if (!nome) {
-        alert(
-            "Digite seu nome."
-        );
-
-        nomeInput.focus();
-
+        alert("Preencha seu nome.");
+        elementoNome?.focus();
         return;
     }
 
     if (!discord) {
-        alert(
-            "Digite seu ID numérico do Discord."
-        );
-
-        discordInput.focus();
-
+        alert("Preencha seu Discord.");
+        elementoDiscord?.focus();
         return;
     }
 
     if (!email) {
-        alert(
-            "Digite seu e-mail."
-        );
-
-        emailInput.focus();
-
+        alert("Preencha seu e-mail.");
+        elementoEmail?.focus();
         return;
     }
 
-    if (!email.includes("@")) {
-        alert(
-            "Digite um e-mail vÃ¡lido."
-        );
+    const valor = Number(calcularTotal());
 
-        emailInput.focus();
-
+    if (!Number.isFinite(valor) || valor <= 0) {
+        alert("O valor do pedido é inválido.");
         return;
     }
-
-    if (carrinho.length === 0) {
-        alert(
-            "Seu carrinho estÃ¡ vazio."
-        );
-
-        return;
-    }
-
-    const valor =
-        calcularTotal();
-
-    // ==========================================
-    // VALOR MÃNIMO
-    // ==========================================
 
     if (valor < 1.50) {
-        alert(
-            "O valor mÃ­nimo do pagamento Ã© R$ 1,50."
-        );
-
+        alert("O valor mínimo do Pix é R$ 1,50.");
         return;
     }
 
-    // ==========================================
-    // DESABILITAR BOTÃƒO
-    // ==========================================
+    const botao =
+        document.getElementById("btn-pagar-pix");
 
     if (botao) {
         botao.disabled = true;
-
-        botao.textContent =
-            "GERANDO PIX...";
+        botao.textContent = "GERANDO PIX...";
     }
 
     try {
-        // ==========================================
-        // PREPARAR PRODUTOS
-        // ==========================================
 
-        const itensParaEnviar =
-            carrinho.map(
-                produto => ({
-                    nome:
-                        String(
-                            produto.nome
-                        ).trim(),
+        console.log("[HYPE] Criando pedido...");
 
-                    preco:
-                        Number(
-                            produto.preco
-                        ),
+        const primeiroItem = carrinho[0] || {};
 
-                    opcao:
-                        String(
-                            produto.opcao || ""
-                        ).trim()
-                })
-            );
+        const produto =
+            String(
+                primeiroItem.nome ||
+                primeiroItem.produto ||
+                "Nitro Discord"
+            ).trim();
 
-        console.log(
-            "=========================================="
-        );
-
-        console.log(
-            "HYPE STORE - GERANDO PAGAMENTO PIX"
-        );
-
-        console.log(
-            "NOME:",
-            nome
-        );
-
-        console.log(
-            "DISCORD:",
-            discord
-        );
-
-        console.log(
-            "EMAIL:",
-            email
-        );
-
-        console.log(
-            "ITENS:",
-            itensParaEnviar
-        );
-
-        console.log(
-            "VALOR:",
-            valor
-        );
-
-        console.log(
-            "=========================================="
-        );
-
-        // ==========================================
-        // 1. CRIAR PEDIDO
-        // ==========================================
+        const opcao =
+            String(
+                primeiroItem.opcao ||
+                ""
+            ).trim();
 
         const respostaPedido =
             await fetch(
@@ -491,44 +398,38 @@ async function gerarPagamentoPix() {
                             "application/json"
                     },
 
-                    body:
-                        JSON.stringify({
-                            nome:
-                                nome,
-
-                            email:
-                                email,
-
-                            discord:
-                                discord,
-
-                            produto:
-                                itensParaEnviar[0]?.nome ||
-                                "Nitro Discord",
-
-                            opcao:
-                                itensParaEnviar[0]?.opcao ||
-                                "",
-
-                            valor:
-                                valor
-                        })
+                    body: JSON.stringify({
+                        nome: nome,
+                        email: email,
+                        discord: discord,
+                        produto: produto,
+                        opcao: opcao,
+                        valor: valor
+                    })
                 }
             );
+
+        const textoPedido =
+            await respostaPedido.text();
 
         let dadosPedido;
 
         try {
             dadosPedido =
-                await respostaPedido.json();
-        } catch (erroJson) {
+                JSON.parse(textoPedido);
+        } catch {
+            console.error(
+                "[HYPE] Resposta inválida ao criar pedido:",
+                textoPedido
+            );
+
             throw new Error(
-                "O servidor retornou uma resposta inv?lida ao criar o pedido."
+                "O servidor retornou uma resposta inválida ao criar o pedido."
             );
         }
 
         console.log(
-            "RESPOSTA DA CRIA??O DO PEDIDO:",
+            "[HYPE] Resposta criação do pedido:",
             dadosPedido
         );
 
@@ -539,24 +440,31 @@ async function gerarPagamentoPix() {
         ) {
             throw new Error(
                 dadosPedido?.erro ||
-                dadosPedido?.message ||
-                "N?o foi poss?vel criar o pedido."
+                "Não foi possível criar o pedido."
             );
         }
 
         const pedidoId =
-            dadosPedido.pedido.id;
+            String(
+                dadosPedido.pedido.id
+            ).trim();
+
+        if (!pedidoId) {
+            throw new Error(
+                "O servidor não retornou o ID do pedido."
+            );
+        }
 
         console.log(
-            "PEDIDO CRIADO:",
+            "[HYPE] Pedido criado:",
             pedidoId
         );
 
-        // ==========================================
-        // 2. GERAR PAGAMENTO PIX
-        // ==========================================
+        console.log(
+            "[HYPE] Gerando PIX..."
+        );
 
-        const resposta =
+        const respostaPix =
             await fetch(
                 "/api/pagamento/pix",
                 {
@@ -567,99 +475,79 @@ async function gerarPagamentoPix() {
                             "application/json"
                     },
 
-                    body:
-                        JSON.stringify({
-                            pedidoId:
-                                pedidoId,
-
-                            valor:
-                                valor,
-
-                            produto:
-                                dadosPedido.pedido.produto,
-
-                            opcao:
-                                dadosPedido.pedido.opcao
-                        })
+                    body: JSON.stringify({
+                        pedidoId: pedidoId,
+                        valor: valor,
+                        produto: produto,
+                        opcao: opcao
+                    })
                 }
             );
 
-        // ==========================================
-        // TENTAR LER RESPOSTA
-        // ==========================================
+        const textoPix =
+            await respostaPix.text();
 
-        let dados;
+        let dadosPix;
 
         try {
-            dados =
-                await resposta.json();
-        } catch (erroJson) {
+            dadosPix =
+                JSON.parse(textoPix);
+        } catch {
+            console.error(
+                "[HYPE] Resposta inválida do PIX:",
+                textoPix
+            );
+
             throw new Error(
-                "O servidor retornou uma resposta inv?lida."
+                "O servidor retornou uma resposta inválida ao gerar o PIX."
             );
         }
 
         console.log(
-            "RESPOSTA DO SERVIDOR:",
-            dados
+            "[HYPE] Resposta PIX:",
+            dadosPix
         );
 
-        // ==========================================
-        // ERRO HTTP
-        // ==========================================
-
-        if (!resposta.ok) {
-            throw new Error(
-                dados?.erro ||
-                dados?.message ||
-                "Erro ao gerar pagamento."
-            );
-        }
-
-        // ==========================================
-        // VALIDAR PAGAMENTO
-        // ==========================================
-
         if (
-            !dados ||
-            !dados.sucesso ||
-            !dados.chargeId
+            !respostaPix.ok ||
+            !dadosPix?.sucesso
         ) {
-            console.error(
-                "Resposta inv?lida do servidor:",
-                dados
-            );
-
             throw new Error(
-                "Pagamento n?o foi criado corretamente."
+                dadosPix?.erro ||
+                "Não foi possível gerar o pagamento PIX."
             );
         }
 
-        // ==========================================
-        // MOSTRAR PIX
-        // ==========================================
+        if (!dadosPix.chargeId) {
+            throw new Error(
+                "A TurbofyPay não retornou o ID da cobrança."
+            );
+        }
 
-        mostrarPagamentoPix(
-            dados
+        mostrarPagamentoPix(dadosPix);
+
+        console.log(
+            "[HYPE] PIX criado com sucesso:",
+            dadosPix.chargeId
         );
 
     } catch (erro) {
+
         console.error(
-            "ERRO AO GERAR PAGAMENTO:",
+            "[HYPE] ERRO AO GERAR PAGAMENTO:",
             erro
         );
 
         alert(
-            erro.message ||
-            "NÃ£o foi possÃ­vel gerar o pagamento."
+            erro?.message ||
+            "Não foi possível gerar o pagamento."
         );
 
     } finally {
+
         if (botao) {
             botao.disabled = false;
-
-            botao.textContent =
-                "PAGAR COM PIX";
+            botao.textContent = "PAGAR COM PIX";
         }
     }
 }
@@ -1383,4 +1271,5 @@ async function carregarPrecosPublicos() {
 }
 
 window.addEventListener("DOMContentLoaded", carregarPrecosPublicos);
+
 
