@@ -1345,7 +1345,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
             }
         );
 
-        const texto = await resposta.text();
+        const texto = await resposta.text(); console.log("========== TURBOFY STATUS DEBUG =========="); console.log("CHARGE ID:", chargeId); console.log("STATUS HTTP:", resposta.status); console.log("RESPOSTA STATUS COMPLETA:", texto); console.log("==========================================");
 
         let dados;
 
@@ -1488,7 +1488,7 @@ app.get(
                 }
             );
 
-            const texto = await resposta.text();
+            const texto = await resposta.text(); console.log("========== TURBOFY STATUS DEBUG =========="); console.log("CHARGE ID:", chargeId); console.log("STATUS HTTP:", resposta.status); console.log("RESPOSTA STATUS COMPLETA:", texto); console.log("==========================================");
 
             let dados;
 
@@ -2829,6 +2829,7 @@ app.listen(PORT, () => {
     console.log("======================================");
     console.log("");
 });
+
 
 
 
