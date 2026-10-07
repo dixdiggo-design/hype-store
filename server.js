@@ -1293,7 +1293,7 @@ app.post("/api/pagamento/pix", async (req, res) => {
             });
         }
 
-        if (valorNumerico < 1.5) {
+        if (valorNumerico < 0.50) {
             return res.status(400).json({
                 sucesso: false,
                 erro: "O valor mÃ­nimo do pagamento Ã© R$ 1,50"
@@ -2829,6 +2829,7 @@ app.listen(PORT, () => {
     console.log("======================================");
     console.log("");
 });
+
 
 
 

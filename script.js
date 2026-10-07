@@ -355,8 +355,8 @@ async function gerarPagamentoPix() {
         return;
     }
 
-    if (valor < 1.50) {
-        alert("O valor mínimo do Pix é R$ 1,50.");
+    if (valor < 0.50) {
+        alert("O valor mínimo do Pix é R$ 0,50.");
         return;
     }
 
@@ -1271,5 +1271,6 @@ async function carregarPrecosPublicos() {
 }
 
 window.addEventListener("DOMContentLoaded", carregarPrecosPublicos);
+
 
 
